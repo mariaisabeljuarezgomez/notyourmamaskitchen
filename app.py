@@ -8,14 +8,14 @@ from datetime import datetime
 app = Flask(__name__)
 
 # --- STORAGE CONFIGURATION ---
-# Default to /data which is a common mount point for Railway Volumes
+# Default to /app/data based on user's Railway volume mount point
 # Fallback to local './data' for development
-STORAGE_BASE = os.environ.get("STORAGE_DIR", "/data")
+STORAGE_BASE = os.environ.get("STORAGE_DIR", "/app/data")
 if not os.path.exists(STORAGE_BASE):
     try:
         os.makedirs(STORAGE_BASE, exist_ok=True)
     except Exception:
-        # If /data is not writable (e.g. local dev without permissions), fallback to local
+        # If /app/data is not writable (e.g. local dev), fallback to local
         STORAGE_BASE = "./data"
         os.makedirs(STORAGE_BASE, exist_ok=True)
 
@@ -23,7 +23,7 @@ DATA_FILE = os.path.join(STORAGE_BASE, "menu_data.json")
 BACKUP_DIR = os.path.join(STORAGE_BASE, "backups")
 
 # Track if we are likely on persistent storage
-IS_PERSISTENT = STORAGE_BASE.startswith("/data") or os.environ.get("RAILWAY_VOLUME_MOUNTED") == "true"
+IS_PERSISTENT = STORAGE_BASE.startswith("/app/data") or os.environ.get("RAILWAY_VOLUME_MOUNTED") == "true"
 
 def validate_schema(data):
     """Basic validation for menu data schema."""
