@@ -1400,9 +1400,13 @@ window.addEventListener('DOMContentLoaded', () => {{
     document.getElementById('btn-open-manual').onclick = openManualChooser;
     document.getElementById('btn-close-manual').onclick = closeManualViewer;
     
-    // Hint Toast
+    // Hint Toast (One-time branded helper)
     setTimeout(() => {{
-        if(!sessionLoaded) showToast('Need help? Open MANUAL anytime.');
+        const hintKey = 'manual_hint_shown_v1';
+        if (!localStorage.getItem(hintKey)) {{
+            showToast('Need help? Tap MANUAL anytime.');
+            localStorage.setItem(hintKey, 'true');
+        }}
     }}, 5000);
 }});
 </script>
