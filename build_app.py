@@ -7,7 +7,8 @@ import glob
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 print("Preparing assets (external)...")
-bg_url = "menu-bg.png"
+bg_url = "menu-bg-preview.jpg"  # LIGHTWEIGHT PREVIEW
+bg_master = "menu-bg.png"       # HIGH-RES MASTER (EXPORT ONLY)
 
 # Dynamically find ALL fonts in the directory
 font_files = glob.glob("*.ttf") + glob.glob("*.otf")
@@ -27,13 +28,14 @@ spans = data["text_data"]
 
 print("Generating HTML...")
 
-# Generate Font CSS (Using relative URLs for speed)
+# Generate Font CSS (Using relative URLs for speed + font-display: swap)
 font_css = ""
 for name, filename in fonts.items():
     font_css += f"""
 @font-face {{
     font-family: '{name}';
     src: url('{filename}') format('truetype');
+    font-display: swap;
 }}
 """
 
@@ -404,7 +406,8 @@ const CONFIG = {{
     height: {height},
     dpi: 300,
     priceColumn: 760, 
-    snapGrid: 10
+    snapGrid: 10,
+    bgMaster: "{bg_master}" // High-res master for export only
 }};
 
 const originalWidth = CONFIG.width;
@@ -747,7 +750,8 @@ async function renderHighRes() {{
     const ctx = canvas.getContext('2d');
     
     const bgImg = new Image();
-    bgImg.src = document.getElementById('menu-bg').src;
+    console.log('Loading High-Res Master Asset...');
+    bgImg.src = CONFIG.bgMaster; // Use the 7MB master for export
     await new Promise(r => bgImg.onload = r);
     ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
     
