@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dine In Menu Editor Pro – Manual Profesional de Usuario</title>
+  <style>
+    :root {
+      --brand-red: #95201d;
+      --brand-yellow: #f8f4ad;
+      --gold: #c8a96a;
+      --ink: #181818;
+      --paper: #fffdf8;
+      --muted: #5b5b5b;
+      --line: #d8d0c5;
+      --soft: #fbf5e7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: #ece7df;
+      line-height: 1.6;
+    }
+    .page {
+      width: 8.5in;
+      min-height: 11in;
+      margin: 24px auto;
+      background: var(--paper);
+      box-shadow: 0 10px 30px rgba(0,0,0,.12);
+      padding: 0.9in 0.8in 0.85in;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-break { page-break-after: always; }
+    .cover {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 9.2in;
+      background:
+        radial-gradient(circle at top right, rgba(200,169,106,.22), transparent 28%),
+        linear-gradient(135deg, #fffdf8 0%, #f6f0e6 45%, #efe7da 100%);
+    }
+    .brand-bar {
+      height: 10px;
+      width: 100%;
+      background: linear-gradient(90deg, var(--brand-red), #b64334, var(--gold), var(--brand-yellow));
+      border-radius: 999px;
+      margin-bottom: 36px;
+    }
+    .eyebrow {
+      color: var(--brand-red);
+      font-size: 12px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-weight: 800;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 34px;
+      line-height: 1.05;
+      margin: 0 0 10px;
+      letter-spacing: -.03em;
+    }
+    .subtitle {
+      font-size: 20px;
+      color: var(--muted);
+      margin: 0 0 26px;
+    }
+    .hero-box {
+      border: 1px solid var(--line);
+      border-left: 8px solid var(--brand-red);
+      background: rgba(255,255,255,.9);
+      padding: 22px 24px;
+      border-radius: 14px;
+      margin: 24px 0 32px;
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      gap: 8px 16px;
+      font-size: 14px;
+      margin-top: 24px;
+    }
+    .meta div:nth-child(odd) { font-weight: 700; color: var(--brand-red); }
+    h2 {
+      font-size: 24px;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 8px;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+    h3 {
+      font-size: 18px;
+      margin: 22px 0 10px;
+      color: var(--brand-red);
+    }
+    p { margin: 0 0 14px; }
+    ul, ol { margin: 0 0 16px 22px; }
+    li { margin-bottom: 8px; }
+    .toc li { margin-bottom: 6px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 18px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 12px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: var(--soft);
+      color: var(--brand-red);
+    }
+    .callout {
+      background: #fff8de;
+      border: 1px solid #eadc98;
+      border-left: 6px solid var(--brand-red);
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin: 18px 0;
+    }
+    .spec-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .spec-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      background: #fff;
+    }
+    .spec-card h4 {
+      margin: 0 0 10px;
+      color: var(--brand-red);
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .footer {
+      position: absolute;
+      left: 0.8in;
+      right: 0.8in;
+      bottom: 0.35in;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #666;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+    .small { font-size: 13px; color: var(--muted); }
+    @media print {
+      body { background: white; }
+      .page { margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <section class="page cover page-break">
+    <div>
+      <div class="brand-bar"></div>
+      <div class="eyebrow">MARIAS DIGITAL DESIGNS</div>
+      <h1>Dine In Menu Editor Pro</h1>
+      <p class="subtitle">Manual Profesional de Usuario – Edición para Clientes</p>
+      <div class="hero-box">
+        <p><strong>Edición profesional de menús para escritorio y móvil</strong></p>
+        <p>Esta guía y el programa Dine In Menu Editor Pro fueron creados por <strong>MARIAS DIGITAL DESIGNS</strong>.</p>
+        <p>Diseñado para ayudar a dueños de restaurantes y a su personal a editar menús con claridad, confianza y una presentación profesional.</p>
+      </div>
+      <div class="meta">
+        <div>Versión</div><div>2.2</div>
+        <div>Fecha de Lanzamiento</div><div>Marzo 2026</div>
+        <div>Última Actualización</div><div>14 de marzo de 2026</div>
+        <div>Tipo de Documento</div><div>Guía de Usuario para Clientes</div>
+        <div>Preparado Por</div><div>MARIAS DIGITAL DESIGNS</div>
+        <div>Programa Por</div><div>MARIAS DIGITAL DESIGNS</div>
+      </div>
+    </div>
+    <div class="small">Documentación premium orientada al cliente para uso autorizado.</div>
+    <div class="footer"><span>Dine In Menu Editor Pro</span><span>MARIAS DIGITAL DESIGNS</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>Tabla de Contenido</h2>
+    <ol class="toc">
+      <li>Bienvenida</li>
+      <li>Antes de Empezar</li>
+      <li>Flujo de Inicio Rápido</li>
+      <li>Qué Afecta Cada Acción</li>
+      <li>Referencia de Controles Principales</li>
+      <li>Barra de Herramientas de Selección</li>
+      <li>Modo de Edición vs. Bloqueo de Diseño</li>
+      <li>Comportamiento Detallado de Edición</li>
+      <li>Sincronización entre Dispositivos</li>
+      <li>Guía Móvil</li>
+      <li>Solución de Problemas</li>
+      <li>Buenas Prácticas</li>
+      <li>Especificaciones Técnicas</li>
+      <li>Información del Documento</li>
+    </ol>
+    <div class="footer"><span>Edición para Clientes</span><span>Página 2</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>1. Bienvenida</h2>
+    <p>Bienvenido a <strong>Dine In Menu Editor Pro</strong>.</p>
+    <p>Este editor le permite actualizar el texto del menú de su restaurante, mover elementos cuando sea necesario, guardar su progreso, continuar en otro dispositivo y exportar un archivo profesional listo para impresión.</p>
+    <p>Está diseñado para ser comprensible en el uso diario del negocio, sin requerir software de diseño ni conocimientos técnicos avanzados.</p>
+    <h3>Qué Incluye Este Manual</h3>
+    <ul>
+      <li>Cómo editar texto y mover elementos de forma segura</li>
+      <li>Cómo funcionan el guardado y la carga entre dispositivos</li>
+      <li>Cómo funciona la versión móvil, incluyendo desplazamiento de la barra, paneo, pinch para zoom y controles táctiles seguros</li>
+      <li>Cómo exportar un PNG final profesional</li>
+    </ul>
+    <div class="footer"><span>Dine In Menu Editor Pro</span><span>Página 3</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>2. Antes de Empezar</h2>
+    <h3>Navegador Recomendado</h3>
+    <ul>
+      <li>Google Chrome</li>
+      <li>Microsoft Edge</li>
+      <li>Apple Safari</li>
+    </ul>
+    <h3>Conexión a Internet</h3>
+    <p>Se requiere una conexión activa a internet para el guardado permanente y la sincronización entre dispositivos. Save Session guarda su trabajo en el servidor y Load Session recupera la última versión guardada cuando continúa en otro dispositivo. [file:1]</p>
+    <h3>Calidad de Vista Previa</h3>
+    <p>Mientras edita, el fondo puede mostrarse con menor resolución para mantener el editor rápido y responsivo. La exportación final siempre usa la fuente original de alta resolución. [file:1]</p>
+    <div class="callout"><strong>Mejor hábito:</strong> Guarde con frecuencia, especialmente después de cambios importantes o antes de cambiar de dispositivo.</div>
+    <div class="footer"><span>Edición para Clientes</span><span>Página 4</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>3. Flujo de Inicio Rápido</h2>
+    <ol>
+      <li>Abra el editor usando el enlace proporcionado.</li>
+      <li>Abra el menú principal tocando o haciendo clic en el botón flotante (FAB).</li>
+      <li>Active <strong>Edit Mode</strong>.</li>
+      <li>Mantenga <strong>Layout Locked</strong> activado mientras edita texto.</li>
+      <li>Seleccione un elemento de texto y haga sus cambios.</li>
+      <li>Si necesita mover un elemento, cambie a <strong>Layout Unlocked</strong>, reposiciónelo y vuelva inmediatamente a <strong>Layout Locked</strong>. [file:1]</li>
+      <li>Haga clic en <strong>Save Session</strong> para guardar su trabajo en el servidor. [file:1]</li>
+      <li>Haga clic en <strong>Export Pro PNG</strong> cuando esté listo para crear el archivo final listo para impresión. [file:1]</li>
+    </ol>
+    <div class="footer"><span>Dine In Menu Editor Pro</span><span>Página 5</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>4. Qué Afecta Cada Acción</h2>
+    <h3>Borrador Local</h3>
+    <p>Mientras trabaja, el editor conserva un borrador temporal en su navegador actual. Esto ayuda a proteger cambios recientes si la página se cierra inesperadamente, pero no es su versión guardada de forma permanente.</p>
+    <h3>Save Session</h3>
+    <p><strong>Save Session</strong> sube su trabajo actual al sistema permanente respaldado por servidor para que pueda recuperarse después o cargarse en otro dispositivo. [file:1]</p>
+    <h3>Load Session</h3>
+    <p><strong>Load Session</strong> reemplaza su vista actual con la última versión guardada en el servidor. [file:1]</p>
+    <h3>Undo Last Change</h3>
+    <p><strong>Undo Last Change</strong> revierte una acción reciente a la vez, hasta 50 pasos, y cubre ediciones de texto, movimientos, cambios de estilo, agregar texto y eliminar elementos. [file:1]</p>
+    <h3>Reset to Original</h3>
+    <p><strong>Reset to Original</strong> restaura la plantilla original y elimina todas las ediciones personalizadas. Es independiente de <strong>Undo Last Change</strong> y debe usarse solo cuando desea reiniciar por completo. [file:1]</p>
+    <h3>Export Pro PNG</h3>
+    <p><strong>Export Pro PNG</strong> crea el archivo PNG final de 12 pulgadas y 300 DPI para impresión profesional o entrega final. [file:1]</p>
+    <div class="footer"><span>Edición para Clientes</span><span>Página 6</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>5. Referencia de Controles Principales</h2>
+    <h3>Botón Flotante (FAB)</h3>
+    <p>El botón flotante es el punto principal de entrada al panel de controles. Úselo para acceder al modo de edición, bloqueo de diseño, guardar, cargar, deshacer, agregar texto, exportar y reiniciar.</p>
+    <h3>Edit Mode</h3>
+    <p>Active <strong>Edit Mode</strong> cuando quiera cambiar texto como precios, nombres de platillos, descripciones o títulos.</p>
+    <h3>Layout Locked / Layout Unlocked</h3>
+    <p><strong>Layout Locked</strong> es el estado predeterminado cada vez que el editor se abre. Úselo para editar texto, hacer paneo, zoom y navegar de forma segura. Use <strong>Layout Unlocked</strong> solo cuando quiera mover físicamente un elemento a otra posición. [file:1]</p>
+    <h3>Save Session</h3>
+    <p>Use <strong>Save Session</strong> después de cambios importantes, antes de cerrar el editor y antes de cambiar de dispositivo. [file:1]</p>
+    <h3>Load Session</h3>
+    <p>Use <strong>Load Session</strong> para recuperar la última versión guardada en el servidor al continuar en otro dispositivo. [file:1]</p>
+    <h3>Undo Last Change</h3>
+    <p><strong>Undo Last Change</strong> revierte una acción a la vez y cubre ediciones de texto, elementos movidos, cambios de estilo, texto agregado y elementos eliminados. [file:1]</p>
+    <h3>Add Text</h3>
+    <p><strong>Add Text</strong> crea un nuevo elemento de texto en blanco en el centro de su vista actual. [file:1]</p>
+    <h3>Export Pro PNG</h3>
+    <p><strong>Export Pro PNG</strong> crea el PNG final de alta resolución usando la fuente original de alta resolución en lugar de la vista previa de edición. [file:1]</p>
+    <h3>Reset to Original</h3>
+    <p><strong>Reset to Original</strong> elimina todos los cambios personalizados y restaura la plantilla original. Esta acción es independiente de Undo y no puede revertirse con <strong>Undo Last Change</strong>. [file:1]</p>
+    <div class="footer"><span>Dine In Menu Editor Pro</span><span>Página 7</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>6. Barra de Herramientas de Selección</h2>
+    <p>La barra de herramientas de selección aparece cuando se selecciona un elemento de texto.</p>
+    <ul>
+      <li><strong>Font Dropdown</strong> para cambiar la fuente</li>
+      <li><strong>Size (+ / -)</strong> para cambiar el tamaño del texto</li>
+      <li><strong>Color Picker</strong> para cambiar el color del texto</li>
+      <li><strong>Letter Spacing</strong> para ajustar el espacio entre letras</li>
+      <li><strong>Delete Element</strong> para eliminar el elemento seleccionado</li>
+    </ul>
+    <h3>Comportamiento en Móvil</h3>
+    <p>En dispositivos móviles, la barra aparece cerca de la parte inferior de la pantalla y puede ser desplazable horizontalmente porque la pantalla del teléfono es más estrecha. Si no ve todas las herramientas de inmediato, deslice hacia la izquierda o derecha sobre la barra para revelar las opciones restantes.</p>
+    <p>Eliminar un elemento requiere confirmación, y el elemento puede recuperarse con <strong>Undo Last Change</strong> siempre que todavía esté dentro del historial de deshacer. [file:1]</p>
+    <div class="footer"><span>Edición para Clientes</span><span>Página 8</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>7. Modo de Edición vs. Bloqueo de Diseño</h2>
+    <table>
+      <thead>
+        <tr><th>Función</th><th>Controla</th><th>Mejor Para</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Edit Mode</strong></td><td>Contenido como palabras y precios</td><td>Cambiar texto, corregir errores y actualizar precios</td></tr>
+        <tr><td><strong>Layout Lock</strong></td><td>Posición en la página</td><td>Mover bloques de texto, encabezados o alineación de precios</td></tr>
+      </tbody>
+    </table>
+    <p>Use <strong>Edit Mode</strong> cuando quiera cambiar palabras. Use <strong>Layout Unlocked</strong> solo cuando quiera mover algo. Regrese a <strong>Layout Locked</strong> tan pronto como el elemento quede en su lugar. [file:1]</p>
+    <p>Esta separación es especialmente importante en móvil, donde los gestos táctiles podrían causar movimiento accidental. [file:1]</p>
+    <div class="footer"><span>Dine In Menu Editor Pro</span><span>Página 9</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>8. Comportamiento Detallado de Edición</h2>
+    <h3>Seleccionar y Editar Texto</h3>
+    <ol>
+      <li>Asegúrese de que <strong>Edit Mode</strong> esté activado.</li>
+      <li>Toque o haga clic una vez sobre un elemento para seleccionarlo.</li>
+      <li>Aparecerán un recuadro de selección y la barra de herramientas.</li>
+      <li>Toque el texto otra vez, o haga doble toque/doble clic según su dispositivo, para colocar el cursor.</li>
+      <li>Escriba sus cambios.</li>
+      <li>Toque el fondo o seleccione otro elemento para terminar la edición.</li>
+    </ol>
+    <h3>Mover Elementos</h3>
+    <ol>
+      <li>Abra el menú principal.</li>
+      <li>Cambie a <strong>Layout Unlocked</strong>.</li>
+      <li>Seleccione el elemento que desea mover.</li>
+      <li>Arrástrelo a la nueva posición.</li>
+      <li>Regrese a <strong>Layout Locked</strong> inmediatamente después de colocarlo. [file:1]</li>
+    </ol>
+    <div class="footer"><span>Edición para Clientes</span><span>Página 10</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>9. Sincronización entre Dispositivos</h2>
+    <ol>
+      <li>Termine sus ediciones en el primer dispositivo.</li>
+      <li>Haga clic en <strong>Save Session</strong>.</li>
+      <li>Abra el mismo enlace del editor en el segundo dispositivo.</li>
+      <li>Haga clic en <strong>Load Session</strong>.</li>
+    </ol>
+    <p>Si olvida guardar en el primer dispositivo, el segundo cargará la última versión guardada, no sus cambios más recientes sin guardar. [file:1]</p>
+    <div class="footer"><span>Dine In Menu Editor Pro</span><span>Página 11</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>10. Guía Móvil</h2>
+    <p>La versión móvil está diseñada para una edición segura en teléfonos y tabletas. Como la interacción táctil es menos precisa que el mouse, el flujo protege primero el diseño y solo permite mover elementos cuando usted lo desbloquea de forma intencional. [file:1]</p>
+    <h3>Cómo Funciona la Versión Móvil</h3>
+    <p>El diseño se abre <strong>bloqueado por defecto</strong> para que pueda hacer paneo, zoom y revisar el menú sin arrastrar texto accidentalmente. [file:1]</p>
+    <h3>Áreas Principales en Móvil</h3>
+    <ul>
+      <li><strong>FAB:</strong> Abre el menú principal con Edit Mode, Layout Lock, Save Session, Load Session, Undo Last Change, Add Text, Export Pro PNG y Reset to Original.</li>
+      <li><strong>Área del Lienzo:</strong> La zona visual principal donde hace paneo, zoom, selecciona texto y revisa el espaciado.</li>
+      <li><strong>Barra Inferior de Selección:</strong> Aparece después de seleccionar texto y puede ser desplazable horizontalmente en teléfonos.</li>
+      <li><strong>Controles Flotantes de Zoom:</strong> Cuando Layout Unlocked está activo, deben aparecer controles flotantes <strong>+</strong> y <strong>-</strong> para un control más preciso. [file:1]</li>
+    </ul>
+    <h3>Gestos Móviles</h3>
+    <ul>
+      <li><strong>Paneo:</strong> Use un dedo para moverse por el lienzo.</li>
+      <li><strong>Pinch para Zoom:</strong> Use dos dedos para acercar o alejar.</li>
+      <li><strong>Seleccionar:</strong> Toque una vez para seleccionar un elemento de texto.</li>
+      <li><strong>Editar:</strong> Toque nuevamente después de seleccionar para colocar el cursor y mostrar el teclado.</li>
+      <li><strong>Arrastrar para Mover:</strong> Solo mientras Layout Unlocked esté activado.</li>
+    </ul>
+    <h3>Protección Multi-Touch</h3>
+    <p>Si comienza un gesto multitáctil mientras está arrastrando, el arrastre debe cancelarse o suprimirse inmediatamente para que el diseño no se desplace accidentalmente durante el pinch zoom. [file:1]</p>
+    <div class="callout"><strong>Mejor flujo en móvil:</strong> Mantenga Layout Locked activado mientras navega y edita texto. Desbloquee solo cuando vaya a reposicionar algo y vuelva a bloquear inmediatamente después. [file:1]</div>
+    <div class="footer"><span>Edición para Clientes</span><span>Página 12</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>11. Solución de Problemas</h2>
+    <h3>Puedo escribir texto pero no puedo mover elementos</h3>
+    <p>Asegúrese de que <strong>Layout Unlocked</strong> esté activado. El editor se abre en <strong>Layout Locked</strong> por defecto. [file:1]</p>
+    <h3>Puedo mover elementos pero no puedo editar texto</h3>
+    <p>Asegúrese de que <strong>Edit Mode</strong> esté activado.</p>
+    <h3>No puedo ver todos los botones de la barra en mi teléfono</h3>
+    <p>Deslice a la izquierda o derecha sobre la barra inferior. En móvil, puede ser desplazable horizontalmente para que todas las herramientas quepan en pantalla.</p>
+    <h3>Mis cambios no aparecen en otro dispositivo</h3>
+    <p>Asegúrese de haber hecho clic en <strong>Save Session</strong> en el primer dispositivo antes de usar <strong>Load Session</strong> en el segundo. [file:1]</p>
+    <h3>La vista previa del editor se ve de menor calidad</h3>
+    <p>Esto es normal. El editor usa una vista previa ligera para mayor velocidad, mientras que <strong>Export Pro PNG</strong> usa la fuente original de alta resolución para el resultado final. [file:1]</p>
+    <div class="footer"><span>Dine In Menu Editor Pro</span><span>Página 13</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>12. Buenas Prácticas</h2>
+    <ul>
+      <li>Mantenga <strong>Layout Locked</strong> activado a menos que esté moviendo elementos activamente.</li>
+      <li>Guarde después de cada sección importante del trabajo.</li>
+      <li>Use <strong>Undo Last Change</strong> inmediatamente cuando note un error. [file:1]</li>
+      <li>Revise su PNG exportado antes de enviarlo a impresión.</li>
+      <li>En móvil, haga zoom antes de seleccionar precios pequeños o texto fino.</li>
+      <li>Deslice la barra en móvil si no todas las herramientas están visibles.</li>
+      <li>Vuelva a bloquear el diseño inmediatamente después de mover cualquier elemento. [file:1]</li>
+    </ul>
+    <div class="footer"><span>Edición para Clientes</span><span>Página 14</span></div>
+  </section>
+
+  <section class="page page-break">
+    <h2>13. Especificaciones Técnicas</h2>
+    <p>Esta sección se incluye como un resumen técnico profesional del estado de producción aceptado. Ayuda a documentar los estándares de calidad y confiabilidad detrás del editor, incluso para lectores que no son técnicos. [file:1]</p>
+    <div class="spec-grid">
+      <div class="spec-card">
+        <h4>Estándar de Exportación</h4>
+        <p>La exportación final permanece como un PNG determinístico de alta resolución de <strong>12 pulgadas</strong> de ancho y <strong>300 DPI</strong>. [file:1]</p>
+      </div>
+      <div class="spec-card">
+        <h4>Fuente de Exportación</h4>
+        <p>La vista previa del editor está optimizada para velocidad, mientras que la exportación usa el fondo original de alta resolución. [file:1]</p>
+      </div>
+      <div class="spec-card">
+        <h4>Persistencia</h4>
+        <p>El guardado permanente está respaldado por servidor, con persistencia en volumen de Railway aceptada como base. [file:1]</p>
+      </div>
+      <div class="spec-card">
+        <h4>Flujo Entre Dispositivos</h4>
+        <p>La persistencia entre dispositivos y navegadores fue verificada como parte del estado base aceptado. [file:1]</p>
+      </div>
+      <div class="spec-card">
+        <h4>Sistema de Undo</h4>
+        <p>Undo Last Change usa un historial real paso a paso que cubre ediciones de texto, movimientos, cambios de estilo, agregar texto y eliminar. [file:1]</p>
+      </div>
+      <div class="spec-card">
+        <h4>Seguridad de Reinicio</h4>
+        <p>Reset to Original permanece separado de Undo Last Change y se conserva como una acción deliberada de restauración. [file:1]</p>
+      </div>
+      <div class="spec-card">
+        <h4>Interacción Móvil</h4>
+        <p>El diseño se abre bloqueado por defecto en móvil, el arrastre se cancela durante multi-touch y aparecen controles flotantes <strong>+</strong> / <strong>-</strong> mientras está desbloqueado. [file:1]</p>
+      </div>
+      <div class="spec-card">
+        <h4>Rendimiento</h4>
+        <p>El tiempo de carga inicial se optimizó al sacar el fondo pesado de la ruta crítica del editor y mantener una vista previa ligera para edición. [file:1]</p>
+      </div>
+      <div class="spec-card">
+        <h4>Sistema de Notificaciones</h4>
+        <p>El editor usa un sistema de modales y toasts con marca propia en lugar de alertas nativas del navegador. [file:1]</p>
+      </div>
+      <div class="spec-card">
+        <h4>Estilo de Marca</h4>
+        <p>Los colores aprobados de notificación incluyen rojo profundo <strong>#95201d</strong>, amarillo <strong>#f8f4ad</strong>, negro y blanco. [file:1]</p>
+      </div>
+    </div>
+    <div class="callout"><strong>Nota profesional:</strong> Estas especificaciones reflejan la base de producción estabilizada y ayudan a demostrar que el editor está construido sobre estándares deliberados de calidad, seguridad y salida profesional. [file:1]</div>
+    <div class="footer"><span>Dine In Menu Editor Pro</span><span>Página 15</span></div>
+  </section>
+
+  <section class="page">
+    <h2>14. Información del Documento</h2>
+    <p><strong>Título del Documento:</strong> Dine In Menu Editor Pro – Manual Profesional de Usuario<br>
+    <strong>Edición:</strong> Edición para Clientes<br>
+    <strong>Versión:</strong> 2.2<br>
+    <strong>Fecha de Lanzamiento:</strong> Marzo 2026<br>
+    <strong>Última Actualización:</strong> 14 de marzo de 2026<br>
+    <strong>Preparado Por:</strong> MARIAS DIGITAL DESIGNS<br>
+    <strong>Programa Por:</strong> MARIAS DIGITAL DESIGNS</p>
+    <p><strong>MARIAS DIGITAL DESIGNS</strong> creó esta guía y el programa Dine In Menu Editor Pro.</p>
+    <div class="footer"><span>Edición para Clientes</span><span>Página 16</span></div>
+  </section>
+</body>
+</html>
