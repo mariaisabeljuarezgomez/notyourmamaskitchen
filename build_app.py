@@ -175,7 +175,7 @@ body.editing .editable-text {{ cursor: move; }}
     border-top: 1px solid rgba(255,255,255,0.1);
     border-radius: 28px 28px 0 0;
     padding: 15px 30px 40px;
-    z-index: 9999;
+    z-index: 1500;
     transform: translateY(0);
     transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
     display: flex; flex-direction: column; gap: 15px;
@@ -268,6 +268,35 @@ body.editing .editable-text {{ cursor: move; }}
     0%, 100% {{ transform: translateY(-50%) translateX(0); }}
     50% {{ transform: translateY(-50%) translateX(5px); }}
 }}
+
+/* ─── FLOATING ZOOM CONTROLS (B9) ─── */
+#floating-zoom {{
+    position: fixed;
+    bottom: 110px;
+    right: 33px;
+    display: none; /* Only visible when UNLOCKED */
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10001;
+}}
+
+.zoom-btn {{
+    width: 50px;
+    height: 50px;
+    border-radius: 25px;
+    background: #95201d; /* Brand Red */
+    color: #f8f4ad; /* Brand Yellow */
+    border: none;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}}
+.zoom-btn:active {{ transform: scale(0.9); }}
 
 /* ─── BRANDED MODAL & TOAST SYSTEM ─── */
 .modal-overlay {{
@@ -404,6 +433,11 @@ body.editing .editable-text {{ cursor: move; }}
 </div>
 <div id="toast-container" class="toast-container"></div>
 
+<div id="floating-zoom">
+    <button class="zoom-btn" id="btn-float-zoom-in" title="Zoom In">＋</button>
+    <button class="zoom-btn" id="btn-float-zoom-out" title="Zoom Out">－</button>
+</div>
+
 <div id="editor-viewport">
     <div id="centering-wrapper">
         <div id="scaler-wrapper">
@@ -442,10 +476,11 @@ html.append(f"""
         <button id="btn-toggle-edit" class="btn-ui primary">✏️ Edit Mode</button>
         <button id="btn-save" class="btn-ui">💾 Save Session</button>
         <button id="btn-load" class="btn-ui">📂 Load Session</button>
-        <button id="btn-lock" class="btn-ui">🔓 Layout Unlocked</button>
+        <button id="btn-lock" class="btn-ui primary">🔒 Layout Locked</button>
+        <button id="btn-undo" class="btn-ui">↩️ Undo Last</button>
         <button id="btn-add-text" class="btn-ui">＋ Add Text</button>
         <button id="btn-png" class="btn-ui">⬇️ Export Pro PNG</button>
-        <button id="btn-reset" class="btn-ui">↺ Reset All</button>
+        <button id="btn-reset" class="btn-ui" style="opacity: 0.6; font-size: 12px;">↺ Reset to Original</button>
     </div>
 </div>
 
@@ -499,11 +534,13 @@ html.append(f"""
 <script>
 // ─── STATE ───
 let isEditing = false;
-let layoutLocked = false;
+let layoutLocked = true; // B8: LOCKED BY DEFAULT
 let selectedElement = null;
 let zoomScale = 1;
-let sessionLoaded = false; 
+let sessionLoaded = false;
 let isSaving = false;
+let historyStack = []; // B7: UNDO STACK
+const MAX_HISTORY = 50;
 
 const viewport = document.getElementById('editor-viewport');
 const scaler = document.getElementById('scaler-wrapper');
@@ -517,7 +554,7 @@ const CONFIG = {{
     width: {width},
     height: {height},
     dpi: 300,
-    priceColumn: 760, 
+    priceColumn: 760,
     snapGrid: 10,
     bgMaster: "{bg_master}"
 }};
@@ -591,6 +628,53 @@ function showToast(message) {{
     }}, 3000);
 }}
 
+// ─── UNDO LOGIC (B7) ───
+function pushHistory() {{
+    const data = {{
+        zoom: zoomScale,
+        scroll: {{ x: viewport.scrollLeft, y: viewport.scrollTop }},
+        elements: []
+    }};
+    document.querySelectorAll('.editable-text').forEach(el => {{
+        data.elements.push({{ 
+            id: el.id, 
+            t: el.innerText, 
+            l: el.style.left, 
+            tp: el.style.top, 
+            fs: el.style.fontSize, 
+            ff: el.style.fontFamily, 
+            ls: el.style.letterSpacing, 
+            c: el.style.color 
+        }});
+    }});
+    historyStack.push(JSON.stringify(data));
+    if (historyStack.length > 50) historyStack.shift();
+}}
+
+function undoLast() {{
+    if (historyStack.length === 0) {{
+        showToast('Nothing to undo');
+        return;
+    }}
+    const lastState = JSON.parse(historyStack.pop());
+    applyData(lastState);
+    showToast('Undo successful');
+}}
+
+// ─── RELIABILITY: FETCH WITH RETRY (B1) ───
+async function fetchWithRetry(url, options = {{}}, retries = 3, backoff = 1000) {{
+    try {{
+        const response = await fetch(url, options);
+        if (!response.ok) throw new Error(`HTTP ${{response.status}}`);
+        return response;
+    }} catch (err) {{
+        if (retries <= 0) throw err;
+        console.warn(`Fetch retry in ${{backoff}}ms...`, err);
+        await new Promise(r => setTimeout(r, backoff));
+        return fetchWithRetry(url, options, retries - 1, backoff * 2);
+    }}
+}}
+
 const originalWidth = CONFIG.width;
 const originalHeight = CONFIG.height;
 
@@ -617,8 +701,6 @@ function fitToScreen() {{
         viewport.scrollTop = (viewport.scrollHeight - sH) / 2;
     }}, 50);
 }}
-window.addEventListener('resize', fitToScreen);
-setTimeout(fitToScreen, 150);
 
 function applyZoom(factor, centerX, centerY) {{
     const oldScale = zoomScale;
@@ -627,7 +709,6 @@ function applyZoom(factor, centerX, centerY) {{
     const rect = viewport.getBoundingClientRect();
     const scrollX = viewport.scrollLeft;
     const scrollY = viewport.scrollTop;
-    
     const viewportX = centerX - rect.left;
     const viewportY = centerY - rect.top;
     
@@ -672,6 +753,10 @@ function attachListeners(el) {{
     const startHandler = (e) => {{
         if(!isEditing) return;
         e.stopPropagation();
+        
+        // Push state for MOVE undo (before start)
+        if (!layoutLocked) pushHistory();
+        
         isDragging = true;
         const clientX = e.clientX || (e.touches && e.touches[0].clientX);
         const clientY = e.clientY || (e.touches && e.touches[0].clientY);
@@ -719,7 +804,7 @@ document.addEventListener('mousemove', (e) => {{
     newY = Math.round(newY / CONFIG.snapGrid) * CONFIG.snapGrid;
     
     const text = selectedElement.innerText.trim();
-    const looksLikePrice = /^\\$?\\\d+(\.\\\d{{2}})?$/.test(text);
+    const looksLikePrice = /^\$?\d+(\.\d{{2}})?$/.test(text);
     if(looksLikePrice && !layoutLocked) {{
         if(Math.abs(newX - CONFIG.priceColumn) < 50) {{
              newX = CONFIG.priceColumn;
@@ -743,6 +828,13 @@ document.addEventListener('touchmove', (e) => {{
     }}
 
     if(!isDragging || !selectedElement || layoutLocked) return;
+    
+    // B8: Conflict Suppression (Multi-touch cancels drag)
+    if (e.touches.length > 1) {{ 
+        isDragging = false; 
+        return; 
+    }}
+
     const rect = container.getBoundingClientRect();
     const t = e.touches[0];
     let newX = (t.clientX - rect.left - dragStartX) / zoomScale;
@@ -759,18 +851,21 @@ document.addEventListener('mouseup', () => {{ isDragging = false; }});
 let pinchTimeout;
 document.addEventListener('touchend', () => {{ 
     isDragging = false; 
-    // B5: Debounce final pinch release to prevent jitter
     clearTimeout(pinchTimeout);
     pinchTimeout = setTimeout(() => {{ initialPinchDistance = 0; }}, 100);
 }});
 
 document.querySelectorAll('.editable-text').forEach(attachListeners);
 
+// ─── UI HANDLERS ───
 fab.onclick = () => {{ 
     if(drawer.classList.contains('closed')) openDrawer();
     else closeDrawer();
 }};
 document.getElementById('btn-close-drawer').onclick = closeDrawer;
+
+window.addEventListener('resize', fitToScreen);
+setTimeout(fitToScreen, 150);
 
 function setEditMode(state) {{
     isEditing = state;
@@ -795,38 +890,70 @@ document.getElementById('btn-toggle-edit').onclick = () => {{
     closeDrawer();
 }};
 
-document.getElementById('btn-zoom-in').onclick = () => applyZoom(1.2, window.innerWidth/2, window.innerHeight/2);
-document.getElementById('btn-zoom-out').onclick = () => applyZoom(0.8, window.innerWidth/2, window.innerHeight/2);
+document.getElementById('btn-lock').onclick = () => {{
+    layoutLocked = !layoutLocked;
+    const btn = document.getElementById('btn-lock');
+    const floatZoom = document.getElementById('floating-zoom');
+    
+    btn.innerText = layoutLocked ? '🔒 Layout Locked' : '🔓 Layout Unlocked';
+    btn.classList.toggle('primary', layoutLocked);
+    
+    // B9: Show floating zoom controls only when UNLOCKED
+    floatZoom.style.display = layoutLocked ? 'none' : 'flex';
+    
+    closeDrawer();
+}};
 
+// Zoom via Selection Bar buttons
+document.getElementById('btn-zoom-in').onclick = (e) => {{ e.stopPropagation(); applyZoom(1.2, window.innerWidth/2, window.innerHeight/2); }};
+document.getElementById('btn-zoom-out').onclick = (e) => {{ e.stopPropagation(); applyZoom(0.8, window.innerWidth/2, window.innerHeight/2); }};
+
+// Floating zoom controls (B9)
+document.getElementById('btn-float-zoom-in').onclick = (e) => {{ e.stopPropagation(); applyZoom(1.2, window.innerWidth/2, window.innerHeight/2); }};
+document.getElementById('btn-float-zoom-out').onclick = (e) => {{ e.stopPropagation(); applyZoom(0.8, window.innerWidth/2, window.innerHeight/2); }};
+
+// ─── STYLING ACTIONS ───
 document.getElementById('btn-size-up').onclick = () => {{
     if(!selectedElement) return;
+    pushHistory();
     let s = parseFloat(selectedElement.style.fontSize) + 1;
     selectedElement.style.fontSize = s + 'px';
     document.getElementById('label-size').innerText = Math.round(s);
 }};
 document.getElementById('btn-size-down').onclick = () => {{
     if(!selectedElement) return;
+    pushHistory();
     let s = Math.max(1, parseFloat(selectedElement.style.fontSize) - 1);
     selectedElement.style.fontSize = s + 'px';
     document.getElementById('label-size').innerText = Math.round(s);
 }};
 
-function setColor(c) {{ if(selectedElement) selectedElement.style.color = c; }}
+function setColor(c) {{ 
+    if(selectedElement) {{
+        pushHistory();
+        selectedElement.style.color = c; 
+    }}
+}}
 
-document.getElementById('btn-nudge-up').onclick = () => {{ if(selectedElement) selectedElement.style.top = (parseFloat(selectedElement.style.top)-1)+'px'; }};
-document.getElementById('btn-nudge-down').onclick = () => {{ if(selectedElement) selectedElement.style.top = (parseFloat(selectedElement.style.top)+1)+'px'; }};
-document.getElementById('btn-nudge-left').onclick = () => {{ if(selectedElement) selectedElement.style.left = (parseFloat(selectedElement.style.left)-1)+'px'; }};
-document.getElementById('btn-nudge-right').onclick = () => {{ if(selectedElement) selectedElement.style.left = (parseFloat(selectedElement.style.left)+1)+'px'; }};
+document.getElementById('btn-nudge-up').onclick = () => {{ if(selectedElement) {{ pushHistory(); selectedElement.style.top = (parseFloat(selectedElement.style.top)-1)+'px'; }} }};
+document.getElementById('btn-nudge-down').onclick = () => {{ if(selectedElement) {{ pushHistory(); selectedElement.style.top = (parseFloat(selectedElement.style.top)+1)+'px'; }} }};
+document.getElementById('btn-nudge-left').onclick = () => {{ if(selectedElement) {{ pushHistory(); selectedElement.style.left = (parseFloat(selectedElement.style.left)-1)+'px'; }} }};
+document.getElementById('btn-nudge-right').onclick = () => {{ if(selectedElement) {{ pushHistory(); selectedElement.style.left = (parseFloat(selectedElement.style.left)+1)+'px'; }} }};
 
-document.getElementById('btn-track-up').onclick = () => {{ if(selectedElement) {{ let ls = parseFloat(selectedElement.style.letterSpacing) || 0; selectedElement.style.letterSpacing = (ls + 0.5) + 'px'; }} }};
-document.getElementById('btn-track-down').onclick = () => {{ if(selectedElement) {{ let ls = parseFloat(selectedElement.style.letterSpacing) || 0; selectedElement.style.letterSpacing = (ls - 0.5) + 'px'; }} }};
+document.getElementById('btn-track-up').onclick = () => {{ if(selectedElement) {{ pushHistory(); let ls = parseFloat(selectedElement.style.letterSpacing) || 0; selectedElement.style.letterSpacing = (ls + 0.5) + 'px'; }} }};
+document.getElementById('btn-track-down').onclick = () => {{ if(selectedElement) {{ pushHistory(); let ls = parseFloat(selectedElement.style.letterSpacing) || 0; selectedElement.style.letterSpacing = (ls - 0.5) + 'px'; }} }};
 
-document.getElementById('bar-font-family').onchange = (e) => {{ if(selectedElement) selectedElement.style.fontFamily = e.target.value; }};
+document.getElementById('bar-font-family').onchange = (e) => {{ 
+    if(selectedElement) {{
+        pushHistory();
+        selectedElement.style.fontFamily = e.target.value; 
+    }}
+}};
 
-// B4: Delete Confirmation with branded modal
 document.getElementById('btn-delete').onclick = () => {{ 
     if(!selectedElement) return;
     showModal('Confirm Delete', 'Are you sure you want to remove this text item?', 'confirm', () => {{
+        pushHistory();
         selectedElement.remove(); 
         selectedElement = null; 
         selBar.classList.remove('show');
@@ -834,20 +961,7 @@ document.getElementById('btn-delete').onclick = () => {{
     }});
 }};
 
-// ─── RELIABILITY: FETCH WITH RETRY (B1) ───
-async function fetchWithRetry(url, options = {{}}, retries = 3, backoff = 1000) {{
-    try {{
-        const response = await fetch(url, options);
-        if (!response.ok) throw new Error(`HTTP ${{response.status}}`);
-        return response;
-    }} catch (err) {{
-        if (retries <= 0) throw err;
-        console.warn(`Fetch failed, retrying in ${{backoff}}ms...`, err);
-        await new Promise(r => setTimeout(r, backoff));
-        return fetchWithRetry(url, options, retries - 1, backoff * 2);
-    }}
-}}
-
+// ─── DATA PERSISTENCE ───
 async function loadSession(isAuto = false) {{
     const btn = document.getElementById('btn-load');
     const originalText = btn.innerText;
@@ -858,6 +972,7 @@ async function loadSession(isAuto = false) {{
         const response = await fetchWithRetry('/api/menu');
         const saved = await response.json();
         
+        // --- Persistence Warning ---
         if (saved.status && !saved.status.is_persistent) {{
             console.warn('⚠️ EPHEMERAL STORAGE DETECTED');
             if (!isAuto) showModal('Storage Warning', 'No Railway Volume detected. Changes will be wiped on redeploy.', 'alert');
@@ -942,9 +1057,44 @@ async function saveSession() {{
     }}
 }}
 
+function applyData(saved) {{
+    saved.elements.forEach(item => {{
+        let el = document.getElementById(item.id);
+        if(!el) {{
+            el = document.createElement('div');
+            el.id = item.id;
+            el.className = 'editable-text';
+            el.contentEditable = isEditing.toString();
+            container.appendChild(el);
+            attachListeners(el);
+        }}
+        el.innerText = item.t; 
+        el.style.left = item.l; 
+        el.style.top = item.tp; 
+        el.style.fontSize = item.fs; 
+        el.style.fontFamily = item.ff; 
+        if(item.ls) el.style.letterSpacing = item.ls; 
+        if(item.c) el.style.color = item.c;
+    }});
+    
+    if(saved.zoom) {{
+        sessionLoaded = true; 
+        zoomScale = saved.zoom;
+        updateTransform();
+        setTimeout(() => {{
+            const oldBehavior = viewport.style.scrollBehavior;
+            viewport.style.scrollBehavior = 'auto';
+            viewport.scrollLeft = saved.scroll.x;
+            viewport.scrollTop = saved.scroll.y;
+            viewport.style.scrollBehavior = oldBehavior;
+        }}, 100);
+    }}
+}}
+
 document.getElementById('btn-save').onclick = saveSession;
 document.getElementById('btn-load').onclick = () => loadSession(false);
 
+// ─── EXPORT PIPELINE (300 DPI) ───
 function changeDpi(blob) {{
     return new Promise((resolve) => {{
         const reader = new FileReader();
@@ -992,14 +1142,6 @@ function changeDpi(blob) {{
     }});
 }}
 
-document.getElementById('btn-lock').onclick = () => {{
-    layoutLocked = !layoutLocked;
-    const btn = document.getElementById('btn-lock');
-    btn.innerText = layoutLocked ? '🔒 Layout Locked' : '🔓 Layout Unlocked';
-    btn.classList.toggle('primary', layoutLocked);
-    closeDrawer();
-}};
-
 async function renderHighRes() {{
     const FINAL_SCALE = 4.1687; 
     const canvas = document.createElement('canvas');
@@ -1024,7 +1166,7 @@ async function renderHighRes() {{
         const family = el.style.fontFamily.replace(/['"]/g, '');
         const color = el.style.color || '#000000';
         const text = el.innerText;
-        const letterSpacing = (parseFloat(el.style.letterSpacing) || 0) * FINAL_SCALE;
+        const ls = (parseFloat(el.style.letterSpacing) || 0) * FINAL_SCALE;
         const align = el.style.textAlign || 'left';
         
         ctx.font = `${{size}}px "${{family}}"`;
@@ -1032,14 +1174,13 @@ async function renderHighRes() {{
         ctx.textBaseline = 'top';
         ctx.textAlign = align;
         
-        let drawX = left;
-        if(letterSpacing === 0) {{
-            ctx.fillText(text, drawX, top);
+        if(ls === 0) {{
+            ctx.fillText(text, left, top);
         }} else {{
-            let currentX = drawX;
+            let currentX = left;
             for(let char of text) {{
                 ctx.fillText(char, currentX, top);
-                currentX += ctx.measureText(char).width + letterSpacing;
+                currentX += ctx.measureText(char).width + ls;
             }}
         }}
         ctx.restore();
@@ -1066,102 +1207,40 @@ document.getElementById('btn-png').onclick = async () => {{
     if(wasEditing) document.body.classList.add('editing');
 }};
 
-// B6: Smart "Add Text" centering (Viewport aware)
+// ─── SPECIAL ACTIONS ───
+document.getElementById('btn-undo').onclick = () => {{
+    undoLast();
+    closeDrawer();
+}};
+
 document.getElementById('btn-add-text').onclick = () => {{
+    pushHistory(); 
     const id = 'txt_' + Date.now();
     const el = document.createElement('div');
-    
-    // Calculate viewport center in world coordinates
     const vW = viewport.clientWidth;
     const vH = viewport.clientHeight;
-    const scrollX = viewport.scrollLeft;
-    const scrollY = viewport.scrollTop;
-    
-    const centerX = (scrollX + vW / 2) / zoomScale;
-    const centerY = (scrollY + vH / 2) / zoomScale;
+    const centerX = (viewport.scrollLeft + vW / 2) / zoomScale;
+    const centerY = (viewport.scrollTop + vH / 2) / zoomScale;
 
     el.id = id; el.className = 'editable-text'; el.innerText = 'New Text'; el.contentEditable = 'true';
-    el.style.left = centerX + 'px'; 
-    el.style.top = centerY + 'px'; 
-    el.style.fontSize = '26px'; 
-    el.style.fontFamily = 'century-gothic-bold'; 
-    el.style.color = '#000000';
+    el.style.left = centerX + 'px'; el.style.top = centerY + 'px'; 
+    el.style.fontSize = '26px'; el.style.fontFamily = 'century-gothic-bold'; el.style.color = '#000000';
     
-    container.appendChild(el); attachListeners(el); 
+    container.appendChild(el); 
+    attachListeners(el); 
     setEditMode(true); 
     selectElement(el); 
     closeDrawer();
 }};
 
 document.getElementById('btn-reset').onclick = () => {{ 
-    showModal('Reset All', 'This will wipe all unsaved changes. Are you sure?', 'confirm', () => location.reload());
+    showModal('Reset to Original', 'THIS WILL PERMANENTLY WIPE ALL CUSTOMIZATIONS and restore the original template. This cannot be undone by the Undo button. Proceed?', 'confirm', () => {{
+        localStorage.removeItem('menu_pro_draft_v1');
+        location.reload(); 
+    }});
 }};
 
-async function loadSession(isAuto = false) {{
-    try {{
-        const response = await fetch('/api/menu');
-        if(!response.ok) throw new Error('Fetch failed');
-        const saved = await response.json();
-        
-        // --- Persistence Warning ---
-        if (saved.status && !saved.status.is_persistent) {{
-            console.warn('⚠️ EPHEMERAL STORAGE DETECTED. Data will be LOST after redeploy.');
-            if (!isAuto) {{
-                alert('Warning: No Railway Volume detected at ' + saved.status.storage_base + '. Your changes will be wiped on the next deployment.');
-            }}
-        }}
-
-        if (!saved.elements || saved.elements.length === 0) {{
-            const localData = localStorage.getItem('menu_pro_draft_v1');
-            if (localData && confirm('No data on server. Load local draft?')) {{
-                applyData(JSON.parse(localData));
-            }}
-            return;
-        }}
-
-        applyData(saved);
-        if(!isAuto) alert('Session Loaded from Server.');
-    }} catch (err) {{
-        console.error('Load failed:', err);
-        const localData = localStorage.getItem('menu_pro_draft_v1');
-        if (localData) applyData(JSON.parse(localData));
-    }}
-}}
-
-function applyData(saved) {{
-    saved.elements.forEach(item => {{
-        let el = document.getElementById(item.id);
-        if(!el) {{
-            el = document.createElement('div');
-            el.id = item.id;
-            el.className = 'editable-text';
-            el.contentEditable = isEditing.toString();
-            container.appendChild(el);
-            attachListeners(el);
-        }}
-        el.innerText = item.t; 
-        el.style.left = item.l; el.style.top = item.tp; 
-        el.style.fontSize = item.fs; el.style.fontFamily = item.ff; 
-        if(item.ls) el.style.letterSpacing = item.ls; 
-        if(item.c) el.style.color = item.c;
-    }});
-    
-    if(saved.zoom) {{
-        sessionLoaded = true; 
-        zoomScale = saved.zoom;
-        updateTransform();
-        setTimeout(() => {{
-            const oldBehavior = viewport.style.scrollBehavior;
-            viewport.style.scrollBehavior = 'auto';
-            viewport.scrollLeft = saved.scroll.x;
-            viewport.scrollTop = saved.scroll.y;
-            viewport.style.scrollBehavior = oldBehavior;
-        }}, 100);
-    }}
-}}
-
-document.getElementById('btn-load').onclick = () => loadSession(false);
-
+// ─── INITIALIZATION ───
 window.addEventListener('DOMContentLoaded', () => {{
     setTimeout(() => loadSession(true), 500); 
 }});
