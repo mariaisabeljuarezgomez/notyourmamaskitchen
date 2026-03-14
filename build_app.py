@@ -6,21 +6,17 @@ import glob
 # Ensure we are in the script's directory for asset loading
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-def to_base64(filepath, mime_type):
-    with open(filepath, "rb") as f:
-        return f"data:{mime_type};base64,{base64.b64encode(f.read()).decode('utf-8')}"
+print("Preparing assets (external)...")
+bg_url = "menu-bg.png"
 
-print("Reading assets...")
-bg_b64 = to_base64("menu-bg.png", "image/png")
-
-# Dynamically load ALL fonts in the directory
+# Dynamically find ALL fonts in the directory
 font_files = glob.glob("*.ttf") + glob.glob("*.otf")
 fonts = {}
 for file in font_files:
     family_name = os.path.splitext(file)[0]
-    fonts[family_name] = to_base64(file, "font/ttf")
+    fonts[family_name] = file
 
-print(f"Loaded {len(fonts)} fonts dynamically: {list(fonts.keys())}")
+print(f"Registered {len(fonts)} fonts: {list(fonts.keys())}")
 
 with open("raw_coords.json", "r", encoding="utf-8") as f:
     data = json.load(f)
@@ -31,13 +27,13 @@ spans = data["text_data"]
 
 print("Generating HTML...")
 
-# Generate Font CSS
+# Generate Font CSS (Using relative URLs for speed)
 font_css = ""
-for name, b64 in fonts.items():
+for name, filename in fonts.items():
     font_css += f"""
 @font-face {{
     font-family: '{name}';
-    src: url('{b64}') format('truetype');
+    src: url('{filename}') format('truetype');
 }}
 """
 
@@ -298,7 +294,7 @@ body.editing .editable-text {{ cursor: move; }}
     <div id="centering-wrapper">
         <div id="scaler-wrapper">
             <div id="menu-container">
-                <img id="menu-bg" src="{bg_b64}" alt="Background" />
+                <img id="menu-bg" src="{bg_url}" alt="Background" />
 """]
 
 # Map PDF data to elements
@@ -392,7 +388,8 @@ let isEditing = false;
 let layoutLocked = false;
 let selectedElement = null;
 let zoomScale = 1;
-let sessionLoaded = false; // Guard for fitToScreen
+let sessionLoaded = false; 
+let isSaving = false;
 
 const viewport = document.getElementById('editor-viewport');
 const scaler = document.getElementById('scaler-wrapper');
@@ -406,7 +403,7 @@ const CONFIG = {{
     width: {width},
     height: {height},
     dpi: 300,
-    priceColumn: 760, // Fixed X for prices based on original layout
+    priceColumn: 760, 
     snapGrid: 10
 }};
 
@@ -418,7 +415,7 @@ function updateTransform() {{
     scaler.style.width = (originalWidth * zoomScale) + 'px';
     scaler.style.height = (originalHeight * zoomScale) + 'px';
     container.style.transform = `scale(${{zoomScale}})`;
-    void viewport.scrollWidth; // Force reflow
+    void viewport.scrollWidth; 
 }}
 
 function fitToScreen() {{
@@ -430,7 +427,6 @@ function fitToScreen() {{
     zoomScale = Math.min(scaleW, scaleH);
     updateTransform();
     
-    // Auto-scroll to center
     setTimeout(() => {{
         if(sessionLoaded) return;
         viewport.scrollLeft = (viewport.scrollWidth - sW) / 2;
@@ -448,17 +444,14 @@ function applyZoom(factor, centerX, centerY) {{
     const scrollX = viewport.scrollLeft;
     const scrollY = viewport.scrollTop;
     
-    // Position of point relative to viewport
     const viewportX = centerX - rect.left;
     const viewportY = centerY - rect.top;
     
-    // World coordinates
     const worldX = (scrollX + viewportX) / oldScale;
     const worldY = (scrollY + viewportY) / oldScale;
     
     updateTransform();
     
-    // Sync scroll
     viewport.scrollLeft = worldX * zoomScale - viewportX;
     viewport.scrollTop = worldY * zoomScale - viewportY;
 }}
@@ -499,10 +492,7 @@ function attachListeners(el) {{
         const clientX = e.clientX || (e.touches && e.touches[0].clientX);
         const clientY = e.clientY || (e.touches && e.touches[0].clientY);
         
-        // Element's top-left in viewport space
         const rect = el.getBoundingClientRect();
-        const vRect = viewport.getBoundingClientRect();
-        
         dragStartX = clientX - rect.left;
         dragStartY = clientY - rect.top;
         
@@ -523,39 +513,16 @@ function selectElement(el) {{
     selBar.classList.add('show');
     document.getElementById('label-size').innerText = Math.round(parseFloat(el.style.fontSize));
     
-    // Robust font matching
     let ff = el.style.fontFamily.replace(/['"]/g, '');
     document.getElementById('bar-font-family').value = ff;
     
     document.getElementById('edit-hint').style.display = 'none';
     document.getElementById('edit-controls').style.display = 'flex';
     
-    // Snap to view if near bottom
     const rect = el.getBoundingClientRect();
     const threshold = window.innerHeight - 200;
     if(rect.bottom > threshold) {{
         viewport.scrollBy({{ top: (rect.bottom - threshold) + 50, behavior: 'smooth' }});
-    }}
-    
-    // Show scroll hint on mobile if needed
-    if(window.innerWidth < 600) {{
-        setTimeout(() => {{
-            const hint = document.getElementById('scroll-hint');
-            const hasMore = selBar.scrollWidth > selBar.clientWidth + 10; 
-            hint.style.display = hasMore ? 'block' : 'none';
-            
-            const hideHint = () => {{
-                hint.style.display = 'none';
-                selBar.removeEventListener('scroll', hideHint);
-                selBar.removeEventListener('click', hideHint);
-                selBar.removeEventListener('touchstart', hideHint);
-            }};
-            if(hasMore) {{
-                selBar.addEventListener('scroll', hideHint);
-                selBar.addEventListener('click', hideHint);
-                selBar.addEventListener('touchstart', hideHint);
-            }}
-        }}, 50);
     }}
 }}
 
@@ -565,14 +532,11 @@ document.addEventListener('mousemove', (e) => {{
     let newX = (e.clientX - rect.left - dragStartX) / zoomScale;
     let newY = (e.clientY - rect.top - dragStartY) / zoomScale;
     
-    // Vertical Snapping
     newY = Math.round(newY / CONFIG.snapGrid) * CONFIG.snapGrid;
     
-    // Smart Column Snap for Prices
     const text = selectedElement.innerText.trim();
     const looksLikePrice = /^\\$?\\\d+(\.\\\d{{2}})?$/.test(text);
     if(looksLikePrice && !layoutLocked) {{
-        // Snap to price column if near it
         if(Math.abs(newX - CONFIG.priceColumn) < 50) {{
              newX = CONFIG.priceColumn;
              selectedElement.style.textAlign = 'right';
@@ -584,12 +548,11 @@ document.addEventListener('mousemove', (e) => {{
 }});
 
 document.addEventListener('touchmove', (e) => {{
-    // PINCH ZOOM
     if (e.touches.length === 2 && initialPinchDistance > 0) {{
         e.preventDefault();
         const dist = getDistance(e.touches);
         const factor = dist / initialPinchDistance;
-        initialPinchDistance = dist; // Delta factor logic
+        initialPinchDistance = dist; 
         const mid = getMidpoint(e.touches);
         applyZoom(factor, mid.x, mid.y);
         return;
@@ -600,14 +563,7 @@ document.addEventListener('touchmove', (e) => {{
     const t = e.touches[0];
     let newX = (t.clientX - rect.left - dragStartX) / zoomScale;
     let newY = (t.clientY - rect.top - dragStartY) / zoomScale;
-    
     newY = Math.round(newY / CONFIG.snapGrid) * CONFIG.snapGrid;
-    
-    // Smart Column Snap for Prices
-    const text = selectedElement.innerText.trim();
-    if(/^\\$?\\\d+(\.\\\d{{2}})?$/.test(text)) {{
-        if(Math.abs(newX - CONFIG.priceColumn) < 50) newX = CONFIG.priceColumn;
-    }}
     
     selectedElement.style.left = newX + 'px';
     selectedElement.style.top = newY + 'px';
@@ -615,14 +571,10 @@ document.addEventListener('touchmove', (e) => {{
 }}, {{passive:false}});
 
 document.addEventListener('mouseup', () => {{ isDragging = false; }});
-document.addEventListener('touchend', () => {{ 
-    isDragging = false; 
-    initialPinchDistance = 0; 
-}});
+document.addEventListener('touchend', () => {{ isDragging = false; initialPinchDistance = 0; }});
 
 document.querySelectorAll('.editable-text').forEach(attachListeners);
 
-// ─── ACTIONS ───
 fab.onclick = () => {{ 
     if(drawer.classList.contains('closed')) openDrawer();
     else closeDrawer();
@@ -681,27 +633,64 @@ document.getElementById('btn-track-down').onclick = () => {{ if(selectedElement)
 document.getElementById('bar-font-family').onchange = (e) => {{ if(selectedElement) selectedElement.style.fontFamily = e.target.value; }};
 document.getElementById('btn-delete').onclick = () => {{ if(selectedElement) {{ selectedElement.remove(); selectedElement = null; selBar.classList.remove('show'); }} }};
 
-document.getElementById('btn-save').onclick = () => {{
+document.getElementById('btn-save').onclick = async () => {{
+    if(isSaving) return;
+    isSaving = true;
+    const btn = document.getElementById('btn-save');
+    const originalText = btn.innerText;
+    btn.innerText = '⏳ Saving...';
+
     const data = {{
         zoom: zoomScale,
         scroll: {{ x: viewport.scrollLeft, y: viewport.scrollTop }},
         elements: []
     }};
+    
     document.querySelectorAll('.editable-text').forEach(el => {{
-        data.elements.push({{ id: el.id, t: el.innerText, l: el.style.left, tp: el.style.top, fs:el.style.fontSize, ff:el.style.fontFamily, ls:el.style.letterSpacing, c:el.style.color }});
+        data.elements.push({{ 
+            id: el.id, 
+            t: el.innerText, 
+            l: el.style.left, 
+            tp: el.style.top, 
+            fs: el.style.fontSize, 
+            ff: el.style.fontFamily, 
+            ls: el.style.letterSpacing, 
+            c: el.style.color 
+        }});
     }});
-    localStorage.setItem('menu_pro_ultimate_v3', JSON.stringify(data));
-    alert('Progress Saved.'); closeDrawer();
+
+    localStorage.setItem('menu_pro_draft_v1', JSON.stringify(data));
+
+    try {{
+        const response = await fetch('/api/menu', {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify(data)
+        }});
+        
+        if (!response.ok) throw new Error('Server save failed');
+        
+        const result = await response.json();
+        console.log('Saved to server:', result);
+        btn.innerText = '✅ Saved';
+        setTimeout(() => btn.innerText = originalText, 2000);
+    }} catch (err) {{
+        console.error(err);
+        btn.innerText = '❌ Save Error';
+        alert('Failed to save to server. A local draft was saved to this browser.');
+        setTimeout(() => btn.innerText = originalText, 3000);
+    }} finally {{
+        isSaving = false;
+    }}
 }};
 
-// ─── DPI METADATA INJECTION (300 DPI FIX) ───
 function changeDpi(blob) {{
     return new Promise((resolve) => {{
         const reader = new FileReader();
         reader.onload = (e) => {{
             const arr = new Uint8Array(e.target.result);
             const chunks = [];
-            let pos = 8; // Skip PNG signature
+            let pos = 8; 
             while (pos < arr.length) {{
                 const length = (arr[pos] << 24) | (arr[pos + 1] << 16) | (arr[pos + 2] << 8) | arr[pos + 3];
                 const type = String.fromCharCode(arr[pos + 4], arr[pos + 5], arr[pos + 6], arr[pos + 7]);
@@ -711,14 +700,13 @@ function changeDpi(blob) {{
                 pos += length + 12;
             }}
 
-            // 11811 pixels per meter = 300 DPI
             const dpiBuffer = new ArrayBuffer(21);
             const view = new DataView(dpiBuffer);
-            view.setUint32(0, 9); // Length
-            view.setUint8(4, 112); view.setUint8(5, 72); view.setUint8(6, 89); view.setUint8(7, 115); // pHYs
-            view.setUint32(8, 11811); // Pixels per meter X
-            view.setUint32(12, 11811); // Pixels per meter Y
-            view.setUint8(16, 1); // Meters unit
+            view.setUint32(0, 9); 
+            view.setUint8(4, 112); view.setUint8(5, 72); view.setUint8(6, 89); view.setUint8(7, 115); 
+            view.setUint32(8, 11811); 
+            view.setUint32(12, 11811); 
+            view.setUint8(16, 1); 
 
             const crcTable = new Uint32Array(256);
             for (let n = 0; n < 256; n++) {{
@@ -751,30 +739,19 @@ document.getElementById('btn-lock').onclick = () => {{
     closeDrawer();
 }};
 
-// ─── PROFESSIONAL RENDER ENGINE (300 DPI CANVAS) ───
 async function renderHighRes() {{
-    const TARGET_WIDTH = CONFIG.width * (CONFIG.dpi / 72); // Scaling based on DPI vs standard screen DPI
-    // BUT we want exactly 3600 for 12 inches... let's use the explicit math:
-    const DPI_SCALE = CONFIG.dpi / 72;
-    const SCALE = (CONFIG.width * (CONFIG.dpi / 72)) / CONFIG.width; // This simplifies to DPI / 72
-    // Actually, to get exactly 12.623 inches @ 300 DPI, we need 3787 pixels.
-    // Our 'originalWidth' is 908.44px. 
-    // SCALE = 3787 / 908.44 = 4.168.
-    const FINAL_SCALE = 4.1687; // Precise multiplier for 12.623" @ 300 DPI
-    
+    const FINAL_SCALE = 4.1687; 
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(originalWidth * FINAL_SCALE);
     canvas.height = Math.round(originalHeight * FINAL_SCALE);
     const ctx = canvas.getContext('2d');
     
-    // 1. Draw Background
     const bgImg = new Image();
     bgImg.src = document.getElementById('menu-bg').src;
     await new Promise(r => bgImg.onload = r);
     ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
     
-    // 2. Draw Every Text Segment
-    await document.fonts.ready; // CRITICAL FOR FIREFOX
+    await document.fonts.ready; 
     
     const elements = document.querySelectorAll('.editable-text');
     for(const el of elements) {{
@@ -794,21 +771,13 @@ async function renderHighRes() {{
         ctx.textAlign = align;
         
         let drawX = left;
-        if(align === 'right') {{
-            drawX = left; 
-        }}
-        
         if(letterSpacing === 0) {{
             ctx.fillText(text, drawX, top);
         }} else {{
             let currentX = drawX;
-            if(align === 'right') {{
-                 ctx.fillText(text, drawX, top);
-            }} else {{
-                for(let char of text) {{
-                    ctx.fillText(char, currentX, top);
-                    currentX += ctx.measureText(char).width + letterSpacing;
-                }}
+            for(let char of text) {{
+                ctx.fillText(char, currentX, top);
+                currentX += ctx.measureText(char).width + letterSpacing;
             }}
         }}
         ctx.restore();
@@ -824,7 +793,6 @@ document.getElementById('btn-png').onclick = async () => {{
     if(wasEditing) document.body.classList.remove('editing');
     if(selectedElement) selectedElement.classList.remove('selected');
     
-    console.log('Starting Pro Render Pipeline...');
     const blob = await renderHighRes();
     const dpiBlob = await changeDpi(blob);
     
@@ -834,7 +802,6 @@ document.getElementById('btn-png').onclick = async () => {{
     link.click();
     
     if(wasEditing) document.body.classList.add('editing');
-    console.log('Pro Render Complete.');
 }};
 
 document.getElementById('btn-add-text').onclick = () => {{
@@ -843,36 +810,54 @@ document.getElementById('btn-add-text').onclick = () => {{
     el.id = id; el.className = 'editable-text'; el.innerText = 'New Text'; el.contentEditable = 'true';
     el.style.left = '450px'; el.style.top = '900px'; el.style.fontSize = '26px'; el.style.fontFamily = 'century-gothic-bold'; el.style.color = '#000000';
     container.appendChild(el); attachListeners(el); 
-    
-    setEditMode(true); // Force Edit Mode so it's draggable
+    setEditMode(true); 
     selectElement(el); 
     closeDrawer();
 }};
 
 document.getElementById('btn-reset').onclick = () => {{ if(confirm('Reset all changes?')) location.reload(); }};
 
-// ─── PERSISTENCE ENGINE ───
-function loadSession(isAuto = false) {{
-    const savedData = localStorage.getItem('menu_pro_ultimate_v3');
-    if(!savedData) {{
-        if(!isAuto) alert('No Session Found.');
-        return;
-    }}
-    const saved = JSON.parse(savedData);
-    
-    // Restore Elements
-    saved.elements.forEach(item => {{
-        const el = document.getElementById(item.id);
-        if(el) {{
-            el.innerText = item.t; 
-            el.style.left = item.l; el.style.top = item.tp; 
-            el.style.fontSize = item.fs; el.style.fontFamily = item.ff; 
-            if(item.ls) el.style.letterSpacing = item.ls; 
-            if(item.c) el.style.color = item.c;
+async function loadSession(isAuto = false) {{
+    try {{
+        const response = await fetch('/api/menu');
+        if(!response.ok) throw new Error('Fetch failed');
+        const saved = await response.json();
+        
+        if (!saved.elements || saved.elements.length === 0) {{
+            const localData = localStorage.getItem('menu_pro_draft_v1');
+            if (localData && confirm('No data on server. Load local draft?')) {{
+                applyData(JSON.parse(localData));
+            }}
+            return;
         }}
+
+        applyData(saved);
+        if(!isAuto) alert('Session Loaded from Server.');
+    }} catch (err) {{
+        console.error('Load failed:', err);
+        const localData = localStorage.getItem('menu_pro_draft_v1');
+        if (localData) applyData(JSON.parse(localData));
+    }}
+}}
+
+function applyData(saved) {{
+    saved.elements.forEach(item => {{
+        let el = document.getElementById(item.id);
+        if(!el) {{
+            el = document.createElement('div');
+            el.id = item.id;
+            el.className = 'editable-text';
+            el.contentEditable = isEditing.toString();
+            container.appendChild(el);
+            attachListeners(el);
+        }}
+        el.innerText = item.t; 
+        el.style.left = item.l; el.style.top = item.tp; 
+        el.style.fontSize = item.fs; el.style.fontFamily = item.ff; 
+        if(item.ls) el.style.letterSpacing = item.ls; 
+        if(item.c) el.style.color = item.c;
     }});
     
-    // Restore Zoom & Viewport
     if(saved.zoom) {{
         sessionLoaded = true; 
         zoomScale = saved.zoom;
@@ -885,13 +870,10 @@ function loadSession(isAuto = false) {{
             viewport.style.scrollBehavior = oldBehavior;
         }}, 100);
     }}
-    if(!isAuto) console.log('Session Loaded Manually.');
-    else console.log('Session Loaded Automatically.');
 }}
 
 document.getElementById('btn-load').onclick = () => loadSession(false);
 
-// AUTO-LOAD ON START
 window.addEventListener('DOMContentLoaded', () => {{
     setTimeout(() => loadSession(true), 500); 
 }});

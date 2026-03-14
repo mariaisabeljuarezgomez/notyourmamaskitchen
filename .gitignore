@@ -1,5 +1,7 @@
 # Large Media/Asset Source Files
 *.pdf
+backups/
+menu_data.json.tmp
 # Scratch/Repair Scripts (Keep repo clean)
 patch_*.py
 write_*.py
