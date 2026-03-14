@@ -128,10 +128,31 @@ The **Save Session** and **Load Session** buttons are designed to move your work
 
 ---
 
-## 📱 Mobile Best Practices
-- **Safe Navigation**: One-finger drags move the view (panning), and two-finger pinches control the zoom.
-- **Multi-Touch Protection**: The editor automatically ignores "drag" commands during a pinch-zoom gesture. This ensures that while you are zooming in to see a small price, the price doesn't accidentally move.
-- **Precision Zooming**: When the layout is unlocked, dedicated "+" and "-" zoom buttons appear at the bottom. Use these for fine scaling without your fingers blocking the content.
+## 📱 Comprehensive Mobile Guide
+
+Editing a professional menu on a mobile screen requires specialized controls. The Editor Pro transforms into a touch-optimized interface when accessed via a phone or tablet.
+
+### 1. Mastering Touch Gestures
+The canvas responds to standard smartphone gestures with enhanced stability:
+- **Pan (Move around the page)**: Use **one finger** to drag the menu in any direction.
+- **Zoom In/Out**: Use a **two-finger pinch** gesture anywhere on the screen.
+- **Select an Item**: Tap once with **one finger**.
+- **Edit Text**: Once an item is selected, tap the text again to show your mobile keyboard.
+
+### 2. The Scrollable Selection Toolbar
+On mobile devices, the bottom toolbar is **horizontal and scrollable**.
+- **How to use**: Tap a menu item to open the toolbar. If you don't see the "Delete" button or the "Letter Spacing" slider, simply **swipe left** on the toolbar itself to reveal the hidden controls.
+- **Benefit**: This keeps the toolbar compact while giving you access to the full suite of professional styling tools without blocking your view of the menu.
+
+### 3. Layout Locked: Your Mobile Safety Net
+By default, the editor is **Layout Locked**. This is critical for mobile users:
+- In this mode, your one-finger drags will only **scroll** the page and your two-finger pinches will only **zoom**.
+- You can edit the *words* of a price or dish, but the item will never accidentally "jump" or move to the wrong spot while you are trying to navigate.
+
+### 4. Precision Zoom & Movement
+If you need to move an item while on mobile, switch to **Layout Unlocked**. Two powerful features will activate:
+- **Floating Zoom Controls**: Small `+` and `-` buttons appear at the bottom. Use these to zoom in for extreme precision. This is better than pinching because your fingers won't block the element you are trying to see.
+- **Multi-Touch Suppression**: The editor is "smart." If you are dragging an item and accidentally touch the screen with a second finger (starting a zoom), the editor will immediately **cancel the drag**. This protects your layout from unintentional "flicks" or accidental movements.
 
 ---
 
