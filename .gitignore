@@ -1,0 +1,29 @@
+# Large Media/Asset Source Files
+*.pdf
+# Scratch/Repair Scripts (Keep repo clean)
+patch_*.py
+write_*.py
+check_*.py
+super_fix.py
+repair_*.py
+dump_*.py
+nudge_*.py
+normalize_fonts.py
+extract_*.py
+all_spans.txt
+*_chunk.txt
+
+# Editor/Temp Files
+.gemini/
+tmp/
+__pycache__/
+*.json
+!raw_coords.json
+
+# Documentation
+# Documentation
+*.md
+
+# Local Environment
+.env
+.ipynb_checkpoints/
