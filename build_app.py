@@ -269,28 +269,108 @@ body.editing .editable-text {{ cursor: move; }}
     50% {{ transform: translateY(-50%) translateX(5px); }}
 }}
 
-/* ─── STATUS BAR ─── */
-#status-bar {{
+/* ─── BRANDED MODAL & TOAST SYSTEM ─── */
+.modal-overlay {{
     position: fixed;
-    top: 20px; left: 50%;
-    transform: translateX(-50%);
+    top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(10px);
-    padding: 8px 20px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #fff;
-    z-index: 10001; /* Above almost everything */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     display: none;
-    align-items: center; gap: 10px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.1);
-    transition: 0.3s;
+    align-items: center; justify-content: center;
+    z-index: 20000;
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
 }}
-#status-bar.warning {{ background: #e67e22; border-color: #f39c12; }}
-#status-bar.error {{ background: #c0392b; border-color: #e74c3c; }}
-#status-bar.success {{ background: #27ae60; border-color: #2ecc71; }}
+
+.modal-content {{
+    background: #f8f4ad;
+    border: 4px solid #95201d;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 400px;
+    color: #000;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}}
+
+.modal-title {{
+    font-size: 20px;
+    font-weight: 700;
+    color: #95201d;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}}
+
+.modal-body {{
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 24px;
+}}
+
+.modal-footer {{
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}}
+
+.modal-btn {{
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}}
+
+.modal-btn-primary {{
+    background: #95201d;
+    color: #f8f4ad;
+    border: none;
+}}
+
+.modal-btn-secondary {{
+    background: transparent;
+    color: #000;
+    border: 2px solid #000;
+}}
+
+.modal-btn:active {{ transform: scale(0.95); opacity: 0.9; }}
+
+/* Toast Style (Non-blocking) */
+.toast-container {{
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 21000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}}
+
+.toast {{
+    background: #95201d;
+    color: #f8f4ad;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    animation: slideDownIn 0.3s ease-out;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}}
+
+@keyframes fadeIn {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
+@keyframes scaleIn {{ from {{ transform: scale(0.9); opacity: 0; }} to {{ transform: scale(1); opacity: 1; }} }}
+@keyframes slideDownIn {{ from {{ transform: translateY(-30px); opacity: 0; }} to {{ transform: translateY(0); opacity: 1; }} }}
 
 @media (max-width: 600px) {{
     #selection-bar {{
@@ -315,7 +395,14 @@ body.editing .editable-text {{ cursor: move; }}
 </head>
 <body>
 
-<div id="status-bar"></div>
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-content" id="modal-content">
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-footer" id="modal-footer"></div>
+    </div>
+</div>
+<div id="toast-container" class="toast-container"></div>
 
 <div id="editor-viewport">
     <div id="centering-wrapper">
@@ -432,8 +519,77 @@ const CONFIG = {{
     dpi: 300,
     priceColumn: 760, 
     snapGrid: 10,
-    bgMaster: "{bg_master}" // High-res master for export only
+    bgMaster: "{bg_master}"
 }};
+
+let lastActiveElement = null;
+
+// ─── BRANDED DIALOG SYSTEM (B2/STABILIZATION) ───
+function showModal(title, body, type = 'alert', onProceed = null) {{
+    lastActiveElement = document.activeElement;
+    const overlay = document.getElementById('modal-overlay');
+    const titleEl = document.getElementById('modal-title');
+    const bodyEl = document.getElementById('modal-body');
+    const footerEl = document.getElementById('modal-footer');
+    
+    titleEl.innerText = title;
+    bodyEl.innerText = body;
+    footerEl.innerHTML = '';
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-btn modal-btn-secondary';
+    closeBtn.innerText = type === 'confirm' ? 'Cancel' : 'Dismiss';
+    closeBtn.onclick = () => {{
+        overlay.style.display = 'none';
+        if(lastActiveElement) lastActiveElement.focus();
+    }};
+    
+    if (type === 'confirm') {{
+        const proceedBtn = document.createElement('button');
+        proceedBtn.className = 'modal-btn modal-btn-primary';
+        proceedBtn.innerText = 'Proceed';
+        proceedBtn.onclick = () => {{
+            overlay.style.display = 'none';
+            if(onProceed) onProceed();
+            if(lastActiveElement) lastActiveElement.focus();
+        }};
+        footerEl.appendChild(closeBtn);
+        footerEl.appendChild(proceedBtn);
+        proceedBtn.focus();
+    }} else {{
+        footerEl.appendChild(closeBtn);
+        closeBtn.focus();
+    }}
+    
+    overlay.style.display = 'flex';
+    
+    // Focus Trap & ESC key
+    const focusable = overlay.querySelectorAll('button');
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    
+    const handleKey = (e) => {{
+        if(e.key === 'Escape') closeBtn.click();
+        if(e.key === 'Tab') {{
+            if (e.shiftKey) {{ if (document.activeElement === first) {{ last.focus(); e.preventDefault(); }} }}
+            else {{ if (document.activeElement === last) {{ first.focus(); e.preventDefault(); }} }}
+        }}
+    }};
+    overlay.onkeydown = handleKey;
+}}
+
+function showToast(message) {{
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<span>✅</span> ${{message}}`;
+    container.appendChild(toast);
+    setTimeout(() => {{
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        setTimeout(() => toast.remove(), 300);
+    }}, 3000);
+}}
 
 const originalWidth = CONFIG.width;
 const originalHeight = CONFIG.height;
@@ -687,13 +843,15 @@ async function loadSession(isAuto = false) {{
         
         if (saved.status && !saved.status.is_persistent) {{
             console.warn('⚠️ EPHEMERAL STORAGE DETECTED');
-            if (!isAuto) alert('Warning: No Railway Volume detected. Changes will be wiped on redeploy.');
+            if (!isAuto) showModal('Storage Warning', 'No Railway Volume detected. Changes will be wiped on redeploy.', 'alert');
         }}
 
         if (!saved.elements || saved.elements.length === 0) {{
             const localData = localStorage.getItem('menu_pro_draft_v1');
-            if (localData && confirm('No data on server. Load local draft?')) {{
-                applyData(JSON.parse(localData));
+            if (localData) {{
+                showModal('No Server Data', 'Found a local draft. Would you like to load it?', 'confirm', () => {{
+                    applyData(JSON.parse(localData));
+                }});
             }}
             if (!isAuto) btn.innerText = originalText;
             return;
@@ -702,12 +860,14 @@ async function loadSession(isAuto = false) {{
         applyData(saved);
         if (!isAuto) {{
             btn.innerText = '✅ Loaded';
+            showToast('Session Loaded from Server');
             setTimeout(() => btn.innerText = originalText, 2000);
         }}
     }} catch (err) {{
         console.error('Load failed:', err);
         if (!isAuto) {{
             btn.innerText = '❌ Load Error';
+            showModal('Load Failed', 'Could not reach server after retries. Showing local draft if available.', 'alert');
             setTimeout(() => btn.innerText = originalText, 3000);
         }}
         const localData = localStorage.getItem('menu_pro_draft_v1');
@@ -753,11 +913,12 @@ async function saveSession() {{
         const result = await response.json();
         console.log('Saved to server:', result);
         btn.innerText = '✅ Saved';
+        showToast('Session Saved Successfully');
         setTimeout(() => btn.innerText = originalText, 2000);
     }} catch (err) {{
         console.error('Save failed:', err);
         btn.innerText = '❌ Save Error';
-        alert('Failed to save to server after retries. Local draft updated.');
+        showModal('Save Failed', 'Server unreachable after retries. A local draft has been updated.', 'alert');
         setTimeout(() => btn.innerText = originalText, 3000);
     }} finally {{
         isSaving = false;
@@ -899,7 +1060,9 @@ document.getElementById('btn-add-text').onclick = () => {{
     closeDrawer();
 }};
 
-document.getElementById('btn-reset').onclick = () => {{ if(confirm('Reset all changes?')) location.reload(); }};
+document.getElementById('btn-reset').onclick = () => {{ 
+    showModal('Reset All', 'This will wipe all unsaved changes. Are you sure?', 'confirm', () => location.reload());
+}};
 
 async function loadSession(isAuto = false) {{
     try {{
