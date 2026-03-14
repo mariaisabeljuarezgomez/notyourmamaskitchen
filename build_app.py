@@ -1,11 +1,11 @@
 import json
-import base64
 import os
 import glob
 
 # Ensure we are in the script's directory for asset loading
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+print("--- Menu Editor Pro Generator ---")
 print("Preparing assets (external)...")
 bg_url = "menu-bg-preview.jpg"  # LIGHTWEIGHT PREVIEW
 bg_master = "menu-bg.png"       # HIGH-RES MASTER (EXPORT ONLY)
@@ -269,6 +269,29 @@ body.editing .editable-text {{ cursor: move; }}
     50% {{ transform: translateY(-50%) translateX(5px); }}
 }}
 
+/* ─── STATUS BAR ─── */
+#status-bar {{
+    position: fixed;
+    top: 20px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    z-index: 10001; /* Above almost everything */
+    display: none;
+    align-items: center; gap: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: 0.3s;
+}}
+#status-bar.warning {{ background: #e67e22; border-color: #f39c12; }}
+#status-bar.error {{ background: #c0392b; border-color: #e74c3c; }}
+#status-bar.success {{ background: #27ae60; border-color: #2ecc71; }}
+
 @media (max-width: 600px) {{
     #selection-bar {{
         bottom: 160px; /* Move up slightly to avoid reaching browser controls */
@@ -291,6 +314,8 @@ body.editing .editable-text {{ cursor: move; }}
 </style>
 </head>
 <body>
+
+<div id="status-bar"></div>
 
 <div id="editor-viewport">
     <div id="centering-wrapper">
@@ -636,8 +661,62 @@ document.getElementById('btn-track-down').onclick = () => {{ if(selectedElement)
 document.getElementById('bar-font-family').onchange = (e) => {{ if(selectedElement) selectedElement.style.fontFamily = e.target.value; }};
 document.getElementById('btn-delete').onclick = () => {{ if(selectedElement) {{ selectedElement.remove(); selectedElement = null; selBar.classList.remove('show'); }} }};
 
-document.getElementById('btn-save').onclick = async () => {{
-    if(isSaving) return;
+// ─── RELIABILITY: FETCH WITH RETRY (B1) ───
+async function fetchWithRetry(url, options = {{}}, retries = 3, backoff = 1000) {{
+    try {{
+        const response = await fetch(url, options);
+        if (!response.ok) throw new Error(`HTTP ${{response.status}}`);
+        return response;
+    }} catch (err) {{
+        if (retries <= 0) throw err;
+        console.warn(`Fetch failed, retrying in ${{backoff}}ms...`, err);
+        await new Promise(r => setTimeout(r, backoff));
+        return fetchWithRetry(url, options, retries - 1, backoff * 2);
+    }}
+}}
+
+async function loadSession(isAuto = false) {{
+    const btn = document.getElementById('btn-load');
+    const originalText = btn.innerText;
+    
+    try {{
+        if (!isAuto) btn.innerText = '⏳ Loading...';
+        
+        const response = await fetchWithRetry('/api/menu');
+        const saved = await response.json();
+        
+        if (saved.status && !saved.status.is_persistent) {{
+            console.warn('⚠️ EPHEMERAL STORAGE DETECTED');
+            if (!isAuto) alert('Warning: No Railway Volume detected. Changes will be wiped on redeploy.');
+        }}
+
+        if (!saved.elements || saved.elements.length === 0) {{
+            const localData = localStorage.getItem('menu_pro_draft_v1');
+            if (localData && confirm('No data on server. Load local draft?')) {{
+                applyData(JSON.parse(localData));
+            }}
+            if (!isAuto) btn.innerText = originalText;
+            return;
+        }}
+
+        applyData(saved);
+        if (!isAuto) {{
+            btn.innerText = '✅ Loaded';
+            setTimeout(() => btn.innerText = originalText, 2000);
+        }}
+    }} catch (err) {{
+        console.error('Load failed:', err);
+        if (!isAuto) {{
+            btn.innerText = '❌ Load Error';
+            setTimeout(() => btn.innerText = originalText, 3000);
+        }}
+        const localData = localStorage.getItem('menu_pro_draft_v1');
+        if (localData) applyData(JSON.parse(localData));
+    }}
+}}
+
+async function saveSession() {{
+    if (isSaving) return;
     isSaving = true;
     const btn = document.getElementById('btn-save');
     const originalText = btn.innerText;
@@ -665,27 +744,28 @@ document.getElementById('btn-save').onclick = async () => {{
     localStorage.setItem('menu_pro_draft_v1', JSON.stringify(data));
 
     try {{
-        const response = await fetch('/api/menu', {{
+        const response = await fetchWithRetry('/api/menu', {{
             method: 'POST',
             headers: {{ 'Content-Type': 'application/json' }},
             body: JSON.stringify(data)
         }});
-        
-        if (!response.ok) throw new Error('Server save failed');
         
         const result = await response.json();
         console.log('Saved to server:', result);
         btn.innerText = '✅ Saved';
         setTimeout(() => btn.innerText = originalText, 2000);
     }} catch (err) {{
-        console.error(err);
+        console.error('Save failed:', err);
         btn.innerText = '❌ Save Error';
-        alert('Failed to save to server. A local draft was saved to this browser.');
+        alert('Failed to save to server after retries. Local draft updated.');
         setTimeout(() => btn.innerText = originalText, 3000);
     }} finally {{
         isSaving = false;
     }}
-}};
+}}
+
+document.getElementById('btn-save').onclick = saveSession;
+document.getElementById('btn-load').onclick = () => loadSession(false);
 
 function changeDpi(blob) {{
     return new Promise((resolve) => {{
