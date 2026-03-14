@@ -1,4 +1,4 @@
-# Triggering redeployment to verify persistence (v1.0.1)
+# Triggering redeployment to verify volume persistence (v1.1.0)
 from flask import Flask, send_from_directory, abort, request, jsonify
 import os
 import json
@@ -7,8 +7,23 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-DATA_FILE = "menu_data.json"
-BACKUP_DIR = "backups"
+# --- STORAGE CONFIGURATION ---
+# Default to /data which is a common mount point for Railway Volumes
+# Fallback to local './data' for development
+STORAGE_BASE = os.environ.get("STORAGE_DIR", "/data")
+if not os.path.exists(STORAGE_BASE):
+    try:
+        os.makedirs(STORAGE_BASE, exist_ok=True)
+    except Exception:
+        # If /data is not writable (e.g. local dev without permissions), fallback to local
+        STORAGE_BASE = "./data"
+        os.makedirs(STORAGE_BASE, exist_ok=True)
+
+DATA_FILE = os.path.join(STORAGE_BASE, "menu_data.json")
+BACKUP_DIR = os.path.join(STORAGE_BASE, "backups")
+
+# Track if we are likely on persistent storage
+IS_PERSISTENT = STORAGE_BASE.startswith("/data") or os.environ.get("RAILWAY_VOLUME_MOUNTED") == "true"
 
 def validate_schema(data):
     """Basic validation for menu data schema."""
@@ -28,13 +43,26 @@ def index():
 
 @app.route("/api/menu", methods=["GET"])
 def get_menu():
+    status_info = {
+        "is_persistent": IS_PERSISTENT,
+        "storage_base": STORAGE_BASE
+    }
+    
     if not os.path.exists(DATA_FILE):
-        return jsonify({"elements": [], "zoom": 1, "scroll": {"x": 0, "y": 0}, "info": "initial"}), 200
+        return jsonify({
+            "elements": [], 
+            "zoom": 1, 
+            "scroll": {"x": 0, "y": 0}, 
+            "info": "initial",
+            "status": status_info
+        }), 200
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return jsonify(json.load(f))
+            data = json.load(f)
+            data["status"] = status_info
+            return jsonify(data)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "status": status_info}), 500
 
 @app.route("/api/menu", methods=["POST"])
 def save_menu():

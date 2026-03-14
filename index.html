@@ -789,6 +789,14 @@ async function loadSession(isAuto = false) {
         if(!response.ok) throw new Error('Fetch failed');
         const saved = await response.json();
         
+        // --- Persistence Warning ---
+        if (saved.status && !saved.status.is_persistent) {
+            console.warn('⚠️ EPHEMERAL STORAGE DETECTED. Data will be LOST after redeploy.');
+            if (!isAuto) {
+                alert('Warning: No Railway Volume detected at ' + saved.status.storage_base + '. Your changes will be wiped on the next deployment.');
+            }
+        }
+
         if (!saved.elements || saved.elements.length === 0) {
             const localData = localStorage.getItem('menu_pro_draft_v1');
             if (localData && confirm('No data on server. Load local draft?')) {
