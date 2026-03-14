@@ -755,7 +755,14 @@ document.addEventListener('touchmove', (e) => {{
 }}, {{passive:false}});
 
 document.addEventListener('mouseup', () => {{ isDragging = false; }});
-document.addEventListener('touchend', () => {{ isDragging = false; initialPinchDistance = 0; }});
+
+let pinchTimeout;
+document.addEventListener('touchend', () => {{ 
+    isDragging = false; 
+    // B5: Debounce final pinch release to prevent jitter
+    clearTimeout(pinchTimeout);
+    pinchTimeout = setTimeout(() => {{ initialPinchDistance = 0; }}, 100);
+}});
 
 document.querySelectorAll('.editable-text').forEach(attachListeners);
 
@@ -815,7 +822,17 @@ document.getElementById('btn-track-up').onclick = () => {{ if(selectedElement) {
 document.getElementById('btn-track-down').onclick = () => {{ if(selectedElement) {{ let ls = parseFloat(selectedElement.style.letterSpacing) || 0; selectedElement.style.letterSpacing = (ls - 0.5) + 'px'; }} }};
 
 document.getElementById('bar-font-family').onchange = (e) => {{ if(selectedElement) selectedElement.style.fontFamily = e.target.value; }};
-document.getElementById('btn-delete').onclick = () => {{ if(selectedElement) {{ selectedElement.remove(); selectedElement = null; selBar.classList.remove('show'); }} }};
+
+// B4: Delete Confirmation with branded modal
+document.getElementById('btn-delete').onclick = () => {{ 
+    if(!selectedElement) return;
+    showModal('Confirm Delete', 'Are you sure you want to remove this text item?', 'confirm', () => {{
+        selectedElement.remove(); 
+        selectedElement = null; 
+        selBar.classList.remove('show');
+        showToast('Item deleted');
+    }});
+}};
 
 // ─── RELIABILITY: FETCH WITH RETRY (B1) ───
 async function fetchWithRetry(url, options = {{}}, retries = 3, backoff = 1000) {{
@@ -1049,11 +1066,27 @@ document.getElementById('btn-png').onclick = async () => {{
     if(wasEditing) document.body.classList.add('editing');
 }};
 
+// B6: Smart "Add Text" centering (Viewport aware)
 document.getElementById('btn-add-text').onclick = () => {{
     const id = 'txt_' + Date.now();
     const el = document.createElement('div');
+    
+    // Calculate viewport center in world coordinates
+    const vW = viewport.clientWidth;
+    const vH = viewport.clientHeight;
+    const scrollX = viewport.scrollLeft;
+    const scrollY = viewport.scrollTop;
+    
+    const centerX = (scrollX + vW / 2) / zoomScale;
+    const centerY = (scrollY + vH / 2) / zoomScale;
+
     el.id = id; el.className = 'editable-text'; el.innerText = 'New Text'; el.contentEditable = 'true';
-    el.style.left = '450px'; el.style.top = '900px'; el.style.fontSize = '26px'; el.style.fontFamily = 'century-gothic-bold'; el.style.color = '#000000';
+    el.style.left = centerX + 'px'; 
+    el.style.top = centerY + 'px'; 
+    el.style.fontSize = '26px'; 
+    el.style.fontFamily = 'century-gothic-bold'; 
+    el.style.color = '#000000';
+    
     container.appendChild(el); attachListeners(el); 
     setEditMode(true); 
     selectElement(el); 
