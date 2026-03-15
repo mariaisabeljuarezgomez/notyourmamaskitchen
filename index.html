@@ -229,6 +229,26 @@ body.editing .editable-text { cursor: move; }
 #selection-bar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
 #selection-bar::-webkit-scrollbar-thumb { background: #ff6d00; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
 
+/* ─── DRAGGABLE TOOLBAR (DESKTOP) ─── */
+.bar-drag-handle {
+    display: none; /* Hidden by default */
+    width: 24px;
+    height: 40px;
+    cursor: move;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 4px;
+    color: rgba(255,255,255,0.4);
+    font-size: 20px;
+    user-select: none;
+}
+
+@media (pointer: fine) {
+    .bar-drag-handle { display: flex; }
+    #selection-bar { cursor: default; }
+}
+
 #scroll-hint {
     position: absolute;
     right: 15px;
@@ -545,6 +565,7 @@ body.editing .editable-text { cursor: move; }
 </div>
 
 <div id="selection-bar">
+    <div class="bar-drag-handle" title="Drag to Move">⠿</div>
     <div id="scroll-hint">Scroll for more ➔</div>
     <div id="edit-hint" style="color: #f1c40f; font-weight: 600; padding: 10px 20px;">
         👆 Click any text to edit it
@@ -613,6 +634,10 @@ const container = document.getElementById('menu-container');
 const fab = document.getElementById('fab');
 const drawer = document.getElementById('bottom-drawer');
 const selBar = document.getElementById('selection-bar');
+
+// ─── TOOLBAR DRAG STATE (DESKTOP) ───
+let barDragState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, hasMoved: false };
+const barHandle = document.querySelector('.bar-drag-handle');
 
 const CONFIG = {
     name: "Menu Editor Pro",
@@ -978,6 +1003,69 @@ document.addEventListener('touchend', () => {
 
 document.querySelectorAll('.editable-text').forEach(attachListeners);
 
+// ─── TOOLBAR DRAG LOGIC (DESKTOP) ───
+function initToolbarDrag() {
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+
+    barHandle.onmousedown = (e) => {
+        e.preventDefault();
+        barDragState.isDragging = true;
+        barDragState.startX = e.clientX - barDragState.currentX;
+        barDragState.startY = e.clientY - barDragState.currentY;
+        selBar.style.transition = 'none';
+        
+        document.onmousemove = dragToolbar;
+        document.onmouseup = stopToolbarDrag;
+    };
+
+    function dragToolbar(e) {
+        if (!barDragState.isDragging) return;
+        
+        let x = e.clientX - barDragState.startX;
+        let y = e.clientY - barDragState.startY;
+        
+        // Boundaries
+        const rect = selBar.getBoundingClientRect();
+        const margin = 10;
+        
+        // Clamp X
+        x = Math.max(-window.innerWidth/2 + rect.width/2 + margin, 
+                     Math.min(window.innerWidth/2 - rect.width/2 - margin, x));
+        
+        // Clamp Y (Don't let it go off top or below drawer area)
+        const minY = -window.innerHeight + rect.height + 70; // 70 for header/safety
+        const maxY = 130; // Original floor
+        y = Math.max(minY, Math.min(maxY, y));
+
+        barDragState.currentX = x;
+        barDragState.currentY = y;
+        barDragState.hasMoved = true;
+        
+        applyToolbarPos();
+    }
+
+    function stopToolbarDrag() {
+        barDragState.isDragging = false;
+        document.onmousemove = null;
+        document.onmouseup = null;
+        selBar.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    }
+}
+
+function applyToolbarPos() {
+    if (!barDragState.hasMoved) return;
+    const baseTransform = `translateX(-50%)`;
+    const offsetTransform = `translate(${barDragState.currentX}px, ${barDragState.currentY}px)`;
+    
+    if (selBar.classList.contains('show')) {
+        selBar.style.transform = `translateX(-50%) ${offsetTransform}`;
+    } else {
+        selBar.style.transform = `translateX(-50%) translateY(300%) ${offsetTransform}`;
+    }
+}
+
+initToolbarDrag();
+
 // ─── UI HANDLERS ───
 fab.onclick = () => { 
     if(drawer.classList.contains('closed')) openDrawer();
@@ -995,10 +1083,12 @@ function setEditMode(state) {
     document.querySelectorAll('.editable-text').forEach(el => el.contentEditable = isEditing);
     if(isEditing) {
         selBar.classList.add('show');
+        applyToolbarPos();
     } else {
         if(selectedElement) selectedElement.classList.remove('selected');
         selectedElement = null; 
         selBar.classList.remove('show');
+        applyToolbarPos();
     }
 }
 
@@ -1197,6 +1287,9 @@ function applyData(saved) {
         if(item.ls) el.style.letterSpacing = item.ls; 
         if(item.c) el.style.color = item.c;
     });
+    
+    // Ensure toolbar stays visible if opened
+    if (selBar.classList.contains('show')) applyToolbarPos();
     
     if(saved.zoom) {
         sessionLoaded = true; 
