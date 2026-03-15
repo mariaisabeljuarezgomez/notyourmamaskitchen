@@ -1,11 +1,13 @@
 # Triggering redeployment to verify volume persistence (v1.1.1)
 from flask import Flask, send_from_directory, abort, request, jsonify
+from flask_compress import Compress
 import os
 import json
 import shutil
 from datetime import datetime
 
 app = Flask(__name__)
+Compress(app)
 
 # --- STORAGE CONFIGURATION ---
 # Default to /app/data based on user's Railway volume mount point

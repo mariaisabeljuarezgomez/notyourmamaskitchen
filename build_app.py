@@ -49,9 +49,8 @@ html = [f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Menu Editor Pro - UX Final</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 {font_css}
 
@@ -558,7 +557,7 @@ body.editing .editable-text {{ cursor: move; }}
     <div id="centering-wrapper">
         <div id="scaler-wrapper">
             <div id="menu-container">
-                <img id="menu-bg" src="{bg_url}" alt="Background" />
+                <img id="menu-bg" src="{bg_url}" alt="Background" fetchpriority="high" />
 """]
 
 # Map PDF data to elements
@@ -1508,5 +1507,14 @@ window.addEventListener('DOMContentLoaded', () => {{
 """)
 
 with open("index.html", "w", encoding="utf-8") as f:
-    f.write("".join(html))
+    full_html = "".join(html)
+    
+    # Basic Minification (Strip excessive whitespace from HTML/CSS/JS)
+    import re
+    # Remove multi-line comments from CSS/JS
+    full_html = re.sub(r'/\*.*?\*/', '', full_html, flags=re.DOTALL)
+    # Remove excessive whitespace
+    full_html = re.sub(r'\n\s+', '\n', full_html)
+    
+    f.write(full_html)
 print("Generated index.html successfully.")
