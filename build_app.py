@@ -1486,7 +1486,7 @@ document.getElementById('btn-reset').onclick = () => {{
 
 // ─── INITIALIZATION ───
 window.addEventListener('DOMContentLoaded', () => {{
-    setTimeout(() => loadSession(true), 500); 
+    setTimeout(() => loadSession(true), 50); 
     
     // Wire up Manual buttons
     document.getElementById('btn-open-manual').onclick = openManualChooser;
