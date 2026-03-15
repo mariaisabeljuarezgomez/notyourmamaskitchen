@@ -176,18 +176,18 @@ body.editing .editable-text {{ cursor: move; }}
     border-radius: 28px 28px 0 0;
     padding: 15px 30px 40px;
     z-index: 1500;
-    transform: translateY(0);
-    transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
     display: flex; flex-direction: column; gap: 15px;
+    pointer-events: none; /* Narrow Fix: Wrapper only */
 }}
 #bottom-drawer.closed {{ transform: translateY(100%); }}
 
-.drawer-handle {{ width: 60px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; margin: 0 auto 15px; cursor: pointer; }}
+.drawer-handle {{ width: 60px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; margin: 0 auto 15px; cursor: pointer; pointer-events: auto; }}
 
 .btn-row {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }}
 
 .btn-ui {{
     background: rgba(255,255,255,0.08);
+    pointer-events: auto;
     border: 1px solid rgba(255,255,255,0.1);
     color: #fff;
     padding: 16px;
@@ -217,8 +217,12 @@ body.editing .editable-text {{ cursor: move; }}
     border: 1px solid rgba(241,196,15,0.3);
     max-width: 95vw;
     overflow-x: auto;
+    pointer-events: none; /* 7.3: Prevent shadow hitbox blocking drawer */
 }}
-#selection-bar.show {{ transform: translateX(-50%) translateY(0); }}
+#selection-bar.show {{ 
+    transform: translateX(-50%) translateY(0); 
+    pointer-events: auto; /* 7.3: Re-enable interaction only when visible */
+}}
 
 .bar-ctrl-btn {{
     width: 40px; height: 40px;
@@ -295,8 +299,6 @@ body.editing .editable-text {{ cursor: move; }}
     bottom: 110px;
     right: 33px;
     display: none; /* Only visible when UNLOCKED */
-    flex-direction: column;
-    gap: 12px;
     z-index: 10001;
 }}
 
@@ -312,7 +314,6 @@ body.editing .editable-text {{ cursor: move; }}
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     display: flex;
-    align-items: center;
     justify-content: center;
     transition: 0.2s;
 }}
@@ -435,6 +436,7 @@ body.editing .editable-text {{ cursor: move; }}
     justify-content: flex-end;
     padding: 0 30px;
     z-index: 5000;
+    pointer-events: none; /* Narrow Fix: Wrapper only */
 }}
 
 #btn-open-manual {{
@@ -448,6 +450,7 @@ body.editing .editable-text {{ cursor: move; }}
     cursor: pointer;
     display: flex;
     align-items: center;
+    pointer-events: auto;
     gap: 8px;
     box-shadow: 0 4px 15px rgba(149, 32, 29, 0.4);
     transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
@@ -578,7 +581,7 @@ for i, span in enumerate(spans):
            f'{span["text"]}</div>')
     html.append(div)
 
-    </div>
+html.append(f"""    </div>
 </main>
 
 <button id="fab" class="open">☰</button>
@@ -586,7 +589,7 @@ for i, span in enumerate(spans):
 <div id="bottom-drawer">
     <div class="drawer-handle" id="btn-close-drawer"></div>
     <div class="btn-row">
-        <button id="btn-toggle-edit" class="btn-ui primary">✏️ Edit Mode</button>
+        <button id="btn-toggle-edit" class="btn-ui">✏️ Edit Mode</button>
         <button id="btn-save" class="btn-ui">💾 Save Session</button>
         <button id="btn-load" class="btn-ui">📂 Load Session</button>
         <button id="btn-lock" class="btn-ui primary">🔒 Layout Locked</button>
@@ -901,6 +904,19 @@ viewport.addEventListener('wheel', (e) => {{
         applyZoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX, e.clientY);
     }}
 }}, {{passive:false}});
+
+// Narrow Fix: Minimal background deselection listener
+viewport.addEventListener('mousedown', (e) => {{
+    const targets = ['editor-viewport', 'centering-wrapper', 'scaler-wrapper', 'menu-container', 'menu-bg'];
+    if (targets.includes(e.target.id)) {{
+        if (selectedElement) {{
+            selectedElement.classList.remove('selected');
+            selectedElement = null;
+            selBar.classList.remove('show');
+            applyToolbarPos();
+        }}
+    }}
+}});
 
 // ─── PINCH ZOOM (MOBILE) ───
 let initialPinchDistance = 0;
@@ -1434,11 +1450,17 @@ async function renderHighRes() {{
 document.getElementById('btn-png').onclick = async () => {{
     closeDrawer();
     selBar.classList.remove('show');
+    selBar.style.display = 'none'; // 5.4: Visual hide
     const wasEditing = isEditing;
     if(wasEditing) document.body.classList.remove('editing');
     if(selectedElement) selectedElement.classList.remove('selected');
     
+    // 5.4: Wait one paint cycle to ensure UI is cleared before rendering
+    await new Promise(r => requestAnimationFrame(r));
+    await new Promise(r => setTimeout(r, 0));
+    
     const blob = await renderHighRes();
+    selBar.style.display = ''; // Restore after render
     const dpiBlob = await changeDpi(blob);
     
     const link = document.createElement('a');
