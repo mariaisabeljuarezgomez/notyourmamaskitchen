@@ -50,6 +50,7 @@ html = [f"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Professional Dine In Menu Editor - Customize your restaurant menu layout, text, and styles with high-resolution 300 DPI export.">
 <title>Menu Editor Pro - UX Final</title>
 <style>
 {font_css}
@@ -553,7 +554,7 @@ body.editing .editable-text {{ cursor: move; }}
     <button class="zoom-btn" id="btn-float-zoom-out" title="Zoom Out">－</button>
 </div>
 
-<div id="editor-viewport">
+<main id="editor-viewport">
     <div id="centering-wrapper">
         <div id="scaler-wrapper">
             <div id="menu-container">
@@ -1515,6 +1516,7 @@ with open("index.html", "w", encoding="utf-8") as f:
     full_html = re.sub(r'/\*.*?\*/', '', full_html, flags=re.DOTALL)
     # Remove excessive whitespace
     full_html = re.sub(r'\n\s+', '\n', full_html)
+    full_html = re.sub(r'  +', ' ', full_html)
     
     f.write(full_html)
 print("Generated index.html successfully.")
