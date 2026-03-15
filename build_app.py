@@ -578,11 +578,8 @@ for i, span in enumerate(spans):
            f'{span["text"]}</div>')
     html.append(div)
 
-html.append(f"""
-            </div>
-        </div>
     </div>
-</div>
+</main>
 
 <button id="fab" class="open">☰</button>
 
