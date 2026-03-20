@@ -1417,6 +1417,13 @@ window.onload = async () => {{
     }}
 }};
 
+
+function fitCanvasToScreen() {{
+    _isFitZoom = true;
+    console.log("fitCanvasToScreen: Using fixed 908px layout with natural scroll.");
+    _isFitZoom = false;
+}}
+
 window.addEventListener('keydown', (e) => {{
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {{
         e.preventDefault();
