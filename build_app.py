@@ -499,6 +499,7 @@ function showToast(m) {{
 }}
 
 function render() {{
+    if(!elementsLayer || !layersPanel) return;
     const bg = document.getElementById('menu-bg'); 
     if(bg) bg.classList.toggle('legacy-bg-hidden', docV2.settings?.legacyBgVisible === false);
     
@@ -1352,7 +1353,7 @@ window.onload = async () => {{
     );
 
     // Fallback: ensure render fires even if fonts never resolve
-    setTimeout(() => {{ try {{ render(); }} catch(e) {{}} }}, 800);
+    setTimeout(() => {{ if(elementsLayer) {{ try {{ render(); }} catch(e) {{}} }} }}, 800);
 
     Promise.all(fontLoadPromises).then(() => {{
         try {{
