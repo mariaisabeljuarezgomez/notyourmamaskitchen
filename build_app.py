@@ -299,7 +299,7 @@ body {{ margin: 0; padding:0; background: var(--bg); font-family: 'Inter', sans-
         .help-popout {{ width: calc(100% - 48px); bottom: 24px; }}
     }}
 </style>
-<script src="export-utils.js"></script>
+<script src="export-utils.js" defer></script>
 </head>
 <body>
 <div id="toast-container"></div>
@@ -488,49 +488,9 @@ function undo() {{
     console.log("Undo Complete. New Stack Size:", historyStack.length);
 }}
 
-const elementsLayer = document.getElementById('elements-layer');
-const viewport = document.getElementById('editor-viewport');
-const scaler = document.getElementById('scaler-wrapper');
-const selBar = document.getElementById('selection-bar');
-const layersPanel = document.getElementById('layers-panel');
+let elementsLayer, viewport, scaler, selBar, layersPanel, barHandle;
 
-// Fix 2 - Moveable Toolbar JS Logic
 let isBarDragged = false;
-const barHandle = document.getElementById('bar-handle');
-if(barHandle) {{
-    barHandle.onpointerdown = (e) => {{
-        e.preventDefault();
-        barHandle.setPointerCapture(e.pointerId);
-        barHandle.style.cursor = 'grabbing';
-        let startX = e.clientX, startY = e.clientY;
-        let rect = selBar.getBoundingClientRect();
-        let offX = e.clientX - rect.left, offY = e.clientY - rect.top;
-
-        document.onpointermove = (pe) => {{
-            if(!isBarDragged) {{
-                isBarDragged = true;
-                selBar.style.transform = 'none';
-                selBar.style.margin = '0';
-            }}
-            let nx = pe.clientX - offX;
-            let ny = pe.clientY - offY;
-
-            // Viewport Constraints
-            nx = Math.max(0, Math.min(nx, window.innerWidth - selBar.offsetWidth));
-            ny = Math.max(60, Math.min(ny, window.innerHeight - selBar.offsetHeight));
-
-            selBar.style.left = nx + 'px';
-            selBar.style.top = ny + 'px';
-            selBar.style.bottom = 'auto'; // Break the fixed bottom rule
-        }};
-
-        document.onpointerup = () => {{
-            document.onpointermove = null;
-            document.onpointerup = null;
-            barHandle.style.cursor = 'grab';
-        }};
-    }};
-}}
 
 function showToast(m) {{
     const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = m;
@@ -1347,6 +1307,12 @@ async function exportPng() {{
 }}
 
 window.onload = async () => {{
+    elementsLayer = document.getElementById('elements-layer');
+    viewport = document.getElementById('editor-viewport');
+    scaler = document.getElementById('scaler-wrapper');
+    selBar = document.getElementById('selection-bar');
+    layersPanel = document.getElementById('layers-panel');
+
     // Step 1: Load saved data
     try {{
         const r = await fetch('/api/menu');
@@ -1409,14 +1375,47 @@ window.onload = async () => {{
     zoomScale = zoomScale || 1;
     applyZoom(1);
     maybeShowHelpPopout();
-}};
 
-function fitCanvasToScreen() {{
-    _isFitZoom = true;
-    console.log("fitCanvasToScreen: Using fixed 908px layout with natural scroll.");
-    _isFitZoom = false;
-}}
-viewport.onwheel = (e) => {{ if(e.ctrlKey) {{ e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.9 : 1.1); }} }};
+    // Step 5: Init Moveable Toolbar & Viewport Listeners
+    barHandle = document.getElementById('bar-handle');
+    if(barHandle) {{
+        barHandle.onpointerdown = (e) => {{
+            e.preventDefault();
+            barHandle.setPointerCapture(e.pointerId);
+            barHandle.style.cursor = 'grabbing';
+            let startX = e.clientX, startY = e.clientY;
+            let rect = selBar.getBoundingClientRect();
+            let offX = e.clientX - rect.left, offY = e.clientY - rect.top;
+
+            document.onpointermove = (pe) => {{
+                if(!isBarDragged) {{
+                    isBarDragged = true;
+                    selBar.style.transform = 'none';
+                    selBar.style.margin = '0';
+                }}
+                let nx = pe.clientX - offX;
+                let ny = pe.clientY - offY;
+
+                // Viewport Constraints
+                nx = Math.max(0, Math.min(nx, window.innerWidth - selBar.offsetWidth));
+                ny = Math.max(60, Math.min(ny, window.innerHeight - selBar.offsetHeight));
+
+                selBar.style.left = nx + 'px';
+                selBar.style.top = ny + 'px';
+                selBar.style.bottom = 'auto'; // Break the fixed bottom rule
+            }};
+
+            document.onpointerup = () => {{
+                document.onpointermove = null;
+                document.onpointerup = null;
+                barHandle.style.cursor = 'grab';
+            }};
+        }};
+    }}
+    if(viewport) {{
+        viewport.onwheel = (e) => {{ if(e.ctrlKey) {{ e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.9 : 1.1); }} }};
+    }}
+}};
 
 window.addEventListener('keydown', (e) => {{
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {{
